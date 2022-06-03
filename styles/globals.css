@@ -1,0 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;900&display=swap');
+html,body {
+    font-family: Montserrat, sans-serif;
+    line-height: 1.5;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    scroll-behavior: smooth;
+}
+main {
+    margin-top: 3.5rem;
+}
+p {
+    margin: 0;
+}
+.section_title {
+    color: #3B38E8;
+    text-align: center;
+}
+.button {
+    padding: 0.6rem 2rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgb(123, 97, 255);
+    cursor: pointer;
+    margin: 0.75rem 0;
+    background: linear-gradient(300deg, rgba(123, 97, 255, 1) 60%, rgba(123, 97, 255, 0.71) 110%);
+    color: white;
+  }
+  

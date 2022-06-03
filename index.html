@@ -1,1 +1,149 @@
-Hello World
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="styles/globals.css" rel="stylesheet" />
+    <link href="styles/nav.css" rel="stylesheet" />
+    <link href="styles/intro.css" rel="stylesheet" />
+    <link href="styles/skills.css" rel="stylesheet" />
+    <link href="styles/projects.css" rel="stylesheet" />
+    <link href="styles/contact.css" rel="stylesheet" />
+    <link href="styles/footer.css" rel="stylesheet" />
+    <title>Portfolio</title>
+</head>
+
+<body>
+    <nav class="nav_container">
+        <div class="nav_items">
+            <a href="#" class="logo">
+                <img src='images/avatar-male.svg' width=30 height=30 />
+            </a>
+            <div style="display: flex; align-items: center;">
+                <ul class="nav_List_items">
+                    <li>
+                        <a href="#about">About</a>
+                    </li>
+                    <li>
+                        <a href="#skills">Skills</a>
+                    </li>
+                    <li>
+                        <a href="#projects">Projects</a>
+                    </li>
+                    <li>
+                        <a href="#contact">Contact</a>
+                    </li>
+                </ul>
+                <p class="cta_button">Hire Me</p>
+            </div>
+        </div>
+    </nav>
+    <main>
+        <div id="about" class="intro_container">
+            <div class="intro_texts">
+                <p class="text_normal">Hello, I'm</p>
+                <p class="typewriter text_big">KEDAR KARKI</p>
+                <p class="text_normal">WEB DEVELOPER</p>
+                <button class="button">
+                    Download CV
+                </button>
+            </div>
+            <div class="card">
+                <p>
+                    Hi, I am Kedar Karki. I am a web developer from Nepal. I have been designing and developing websites
+                    for 3 years. I an proficient in HTML and CSS. I can also deploy the website into GitHub.
+                </p>
+            </div>
+
+        </div>
+
+        <div id="skills" class="skills_container">
+            <h2 class="section_title">MY SKILLS</h2>
+            <div class="skills_list">
+                <div class="skill_item">
+                    <div class="skill_icon">
+                        <img src="images/html5.svg" />
+                    </div>
+                    <p>HTML5</p>
+                </div>
+                <div class="skill_item">
+                    <div class="skill_icon">
+                        <p style="color: white; font-weight: bold; font-size: 1.5rem;">CSS</p>
+                    </div>
+                    <p>CSS</p>
+                </div>
+                <div class="skill_item">
+                    <div class="skill_icon">
+                        <img src="images/github.svg" />
+                    </div>
+                    <p>GitHub</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="projects" class="projects_container">
+            <h2 class="section_title">MY PROJECTS</h2>
+            <div class="projects_grid">
+                <div class="project_grid_item">
+                    <img src="images/facebook.png"/>
+                    <div class="project_title">
+                        <p>Facebook UI</p>
+                    </div>
+                </div>
+                <div class="project_grid_item">
+                    <img src="images/twitter.png"/>
+                    <div class="project_title">
+                        <p>Twitter Clone</p>
+                    </div>
+                </div>
+                <div class="project_grid_item">
+                    <img src="images/github.jpg"/>
+                    <div class="project_title">
+                        <p>GitHub</p>
+                    </div>
+                </div>
+                <div class="project_grid_item">
+                    <img src="images/tesla.jpg"/>
+                    <div class="project_title">
+                        <p>Car Marketplace</p>
+                    </div>
+                </div>
+                <div class="project_grid_item">
+                    <img src="images/news.jpg"/>
+                    <div class="project_title">
+                        <p>News Site</p>
+                    </div>
+                </div>
+                <div class="project_grid_item">
+                    <img src="images/blog.jpg"/>
+                    <div class="project_title">
+                        <p>Tech Blog</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+<div id="contact">
+    <h2 class="section_title">CONTACT ME</h2>
+    <div class="form_container">
+        <form>
+            <label for="name">Your name</label><br>
+            <input type="text" id="name" name="name"><br>
+            <label for="email">Your email</label><br>
+            <input type="email" id="email" name="email"><br>
+            <label for="message">Your message</label><br>
+            <textarea id="message" name="message" rows="4" cols="50">
+            </textarea> <br />
+            <button type="submit" class="button">Send Message</button>
+        </form>
+    </div>
+
+</div>
+    </main>
+    <footer  class="footer_container">
+        <p>&copy 2022 Designed and Developed by Kedar Karki</p>
+    </footer>
+</body>
+
+</html>
