@@ -1,6 +1,5 @@
 
 .footer_container {
-    margin-top: 3.5rem;
     width: 100%;
     background: linear-gradient(300deg, rgba(123, 97, 255, 1) 60%, rgba(123, 97, 255, 0.71) 110%);
     display: flex;
@@ -10,4 +9,5 @@
     align-self: center;
     color: white;
     padding: 1rem;
+    text-align: center;
 }
