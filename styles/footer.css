@@ -1,7 +1,6 @@
 
 .footer_container {
     width: 100%;
-    background: linear-gradient(300deg, rgba(123, 97, 255, 1) 60%, rgba(123, 97, 255, 0.71) 110%);
     display: flex;
     justify-content: center;
 }

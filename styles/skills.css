@@ -1,23 +1,26 @@
 .skills_container {
     margin: 5rem 0;
 }
+
 .skills_list {
     display: flex;
     justify-content: space-around;
     margin: 3.5rem auto;
 }
+
 .skill_icon {
-width: 6rem;
-height: 6rem;
-background: linear-gradient(269.83deg, #7B61FF 54.75%, rgba(123, 97, 255, 0.71) 106.71%);
-border-radius: 100%;
-display: flex;
-align-items: center;
-justify-content: center;
+    width: 6rem;
+    height: 6rem;
+    border-radius: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
+
 div.skill_icon img {
     width: 3rem;
 }
+
 div.skill_item p {
     text-align: center;
     margin: 1rem auto;

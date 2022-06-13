@@ -1,6 +1,6 @@
 .projects_grid {
     display: grid;
-    grid-template-columns: auto auto auto;
+    grid-template-columns: repeat(3, auto);
     gap: 3rem;
     margin: 5rem;
 }
@@ -14,14 +14,12 @@
     position: relative;
     text-align: center;
     height: 15rem;
-    box-shadow: 0px 20px 40px rgba(157, 157, 157, 0.2);
     border-radius: 1rem;
 }
 .project_grid_item:hover {
     border: 1.5px solid #3B38E8;
-    transition: transform 0.3s, rotate 0.5s;
+    transition: transform 0.3S;
     transform: scale(1.2);
-    rotate: -2deg;
     cursor: pointer;
 }
 div.project_grid_item img {

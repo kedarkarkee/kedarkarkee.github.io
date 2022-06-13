@@ -1,53 +1,48 @@
 .intro_container {
-    display: flex;
-    align-items: center;
-    margin-top: 12rem;
-    justify-content: space-evenly;
+  display: flex;
+  align-items: center;
+  margin-top: 12rem;
+  justify-content: space-evenly;
+}
 
+
+.typewriter {
+  overflow: hidden;
+  /* Ensures the content is not revealed until the animation */
+  white-space: nowrap;
+  margin: 0.75rem 0;
+  animation:
+    typing 2.5s steps(40, end) forwards;
 }
-.text_normal {
-  font-size: 1.5rem;
-  line-height: 2rem;
-}
-.text_big {
-font-size: 3.75rem;
-line-height: 1;
-font-weight: 900;
-}
-.typewriter{
-    overflow: hidden; /* Ensures the content is not revealed until the animation */
-    white-space: nowrap;
-    /* margin: 0 auto; Gives that scrolling effect as the typing happens */
-    /* letter-spacing: .15em; Adjust as needed */
-    animation: 
-      typing 2.5s steps(40,end) forwards;
-      margin: 0.75rem 0;
-    }
-  
-  /* The typing effect */
-  @keyframes typing {
-    from { width: 0 }
-    to { width: 100% }
+
+@keyframes typing {
+  from {
+    width: 0
   }
+  to {
+    width: 100%
+  }
+}
+
 .card {
-  box-shadow: 0px 25px 50px rgba(157, 157, 157, 0.4);
   padding: 1rem;
   border-radius: 0.75rem;
   width: 30%;
-  background: linear-gradient(90deg, rgba(123, 97, 255, 1) 60%, rgba(123, 97, 255, 0.71) 150%);
   color: white;
 }
 
 @media only screen and (max-width: 768px) {
-  .intro_container  {
+  .intro_container {
     flex-wrap: wrap;
     text-align: center;
   }
+
   .card {
     margin-top: 1rem;
-     width: 80%;
+    width: 80%;
   }
+
   .text_big {
     font-size: 2rem;
   }
- }
+}
