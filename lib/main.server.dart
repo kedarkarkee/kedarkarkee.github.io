@@ -26,7 +26,6 @@ void main() {
   // with the provided parameters and components.
   runApp(
     Document(
-      base: 'kedarkarkee.github.io',
       title: 'Kedar Karki',
       styles: [
         // Special import rule to include to another css file.
