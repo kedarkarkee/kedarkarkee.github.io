@@ -43,6 +43,7 @@ extension type Object3D._(JSObject _) implements JSObject {
   external Vec3 scale;
   external Euler rotation;
   external Quat quaternion;
+  external bool visible;
   external void add(Object3D child);
 }
 
@@ -128,6 +129,21 @@ Object3D signboard(String text, double w, double h, {String bg = '#6b4a2b', Stri
     ]),
   );
   return Object3D._(m);
+}
+
+/// A soft dark disc used as a ground shadow so jumps and flight read as height.
+Object3D blobShadow(double radius) {
+  final m = _new('Mesh');
+  m.setProperty('geometry'.toJS, _new('CircleGeometry', [radius, 24]));
+  m.setProperty(
+    'material'.toJS,
+    _new('MeshBasicMaterial', [
+      {'color': 0x000000, 'transparent': true, 'opacity': 0.3, 'depthWrite': false},
+    ]),
+  );
+  final o = Object3D._(m);
+  o.rotation.x = -3.141592653589793 / 2;
+  return o;
 }
 
 Object3D light(String type, int color, num intensity) => Object3D._(_new(type, [color, intensity]));

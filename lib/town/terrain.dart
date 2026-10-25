@@ -87,10 +87,13 @@ bool _inBlock(double x, double z) {
   return false;
 }
 
+/// Whether (x, z) is inside the village limits (used when flying over everything).
+bool inWorld(double x, double z) => x.abs() <= worldX && z >= worldNorth && z <= worldSouth;
+
 /// Whether (x, z) can't be stood on: outside the village, inside a house, in a
 /// retaining wall (except at a staircase) or against a staircase's side rails.
 bool isBlocked(double x, double z) {
-  if (x.abs() > worldX || z < worldNorth || z > worldSouth) return true;
+  if (!inWorld(x, z)) return true;
 
   for (final s in stairs) {
     final dx = (x - s.x).abs();

@@ -28,7 +28,7 @@ class TownSceneState extends State<TownScene> {
       div(id: _id, classes: 'town', []),
       // Shown on keyboard devices.
       p(classes: 'town-hint hint-desktop', [
-        .text('WASD / arrows to move, Shift to sprint, E to ride the bike or enter a house, P to honk, or click the ground.'),
+        .text('WASD / arrows to move, Shift to sprint, Space to jump, F to fly, R to ride the bike, E to enter a house, P to honk.'),
       ]),
       // Shown on touch screens.
       p(classes: 'town-hint hint-touch', [.text('Drag the pad to move. Push it to the edge to run.')]),

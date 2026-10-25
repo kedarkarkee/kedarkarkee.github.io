@@ -31,6 +31,7 @@ class Stickman {
   final _legP = Object3D.group(), _legN = Object3D.group();
   final _kneeP = Object3D.group(), _kneeN = Object3D.group();
   final _armP = Object3D.group(), _armN = Object3D.group();
+  final _cape = Object3D.group();
   final _elbowP = Object3D.group(), _elbowN = Object3D.group();
 
   static const _ink = 0x111111;
@@ -84,6 +85,11 @@ class Stickman {
       _at(_ink3('Sphere', [0.14, 12, 8])..scale.set(1.1, 0.4, 2.0), knee, 0, -_shin, 0.12);
     }
 
+    // A red cape, only shown in flight.
+    _at(_cape, _torso, 0, _shoulderY, -0.1);
+    _at(mesh('Box', [0.9, 1.7, 0.03], 0xe53935, basic: true), _cape, 0, -0.85, 0);
+    _cape.visible = false;
+
     _buildFace();
   }
 
@@ -116,18 +122,17 @@ class Stickman {
     }
   }
 
-  /// Keeps the face over the head (following the lean and any lift onto a
-  /// bike) and turned to the camera.
+  /// Keeps the face over the head (following the lean, the flight pitch and
+  /// any lift onto a bike) and turned to the camera.
   void updateFace(Camera camera) {
     final p = root.position;
-    final lean = _torso.rotation.x;
-    final fwd = (_rig.position.z + _headY * math.sin(lean)) * scale;
+    final pitch = _rig.rotation.x;
+    final total = pitch + _torso.rotation.x;
+    final hip = _torso.position.y;
+    final up = _rig.position.y + hip * math.cos(pitch) + _headY * math.cos(total);
+    final fwd = (_rig.position.z + hip * math.sin(pitch) + _headY * math.sin(total)) * scale;
     final h = root.rotation.y;
-    face.position.set(
-      p.x + fwd * math.sin(h),
-      p.y + (_rig.position.y + _hipY + _headY * math.cos(lean) + _bob) * scale,
-      p.z + fwd * math.cos(h),
-    );
+    face.position.set(p.x + fwd * math.sin(h), p.y + up * scale, p.z + fwd * math.cos(h));
     face.quaternion.copy(camera.quaternion);
   }
 
@@ -175,14 +180,77 @@ class Stickman {
   /// [sprint] runs faster with a longer stride, more knee lift and a forward lean.
   ///
   /// [riding] seats him on a bicycle whose crank is at angle [crank].
-  void animate(double t, bool moving, {bool sprint = false, bool riding = false, double crank = 0}) {
+  ///
+  /// [airborne] is a jump (limbs spread), [flying] is the Superman pose.
+  void animate(
+    double t,
+    bool moving, {
+    bool sprint = false,
+    bool riding = false,
+    double crank = 0,
+    bool airborne = false,
+    bool flying = false,
+  }) {
     final dt = math.min(t - _lastT, 0.05);
     _lastT = t;
+    _cape.visible = flying;
     if (riding) {
+      _rig.rotation.x = 0;
       _ride(crank);
       return;
     }
-    _rig.position.set(0, 0, 0);
+
+    // Pitch the whole body forward for flight (hip stays at the same height).
+    final pitchTarget = flying ? math.pi / 2 : 0.0;
+    _rig.rotation.x += (pitchTarget - _rig.rotation.x) * math.min(1, dt * 8);
+    final f = _rig.rotation.x / (math.pi / 2);
+    _rig.position.set(0, _hipY * f, -_hipY * f);
+
+    if (flying) {
+      // Arms stretched out ahead of the head, legs straight back, cape streaming.
+      void ease(Object3D o, double x, double z) {
+        o.rotation.x += (x - o.rotation.x) * 0.2;
+        o.rotation.z += (z - o.rotation.z) * 0.2;
+      }
+
+      ease(_armP, math.pi, 0.08);
+      ease(_armN, math.pi, -0.08);
+      ease(_elbowP, 0, 0);
+      ease(_elbowN, 0, 0);
+      ease(_torso, 0, 0);
+      final flutter = math.sin(t * 14) * 0.04;
+      _legP.rotation.x += (flutter - _legP.rotation.x) * 0.2;
+      _legN.rotation.x += (-flutter - _legN.rotation.x) * 0.2;
+      _legP.rotation.z += (0.05 - _legP.rotation.z) * 0.2;
+      _legN.rotation.z += (-0.05 - _legN.rotation.z) * 0.2;
+      _kneeP.rotation.x *= 0.8;
+      _kneeN.rotation.x *= 0.8;
+      _cape.rotation.x = 0.3 + math.sin(t * 12) * 0.12;
+      _bob = 0;
+      _torso.position.y = _hipY;
+      return;
+    }
+
+    if (airborne) {
+      // Jump: arms thrown up and out, knees tucked.
+      _armP.rotation.x = 0;
+      _armN.rotation.x = 0;
+      _armP.rotation.z = 2.4;
+      _armN.rotation.z = -2.4;
+      _elbowP.rotation.x = 0;
+      _elbowN.rotation.x = 0;
+      _legP.rotation.x = -0.7;
+      _legN.rotation.x = -0.3;
+      _legP.rotation.z = 0.1;
+      _legN.rotation.z = -0.1;
+      _kneeP.rotation.x = 1.1;
+      _kneeN.rotation.x = 0.8;
+      _torso.rotation.x = 0;
+      _bob = 0;
+      _torso.position.y = _hipY;
+      return;
+    }
+
     if (moving) {
       // Advance the gait phase instead of using the clock, so switching
       // between walking and sprinting doesn't make the legs jump.

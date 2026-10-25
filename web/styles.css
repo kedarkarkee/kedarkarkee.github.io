@@ -141,11 +141,35 @@ html, body {
     height: 5.5rem;
   }
 
-  .honk-button {
+  .enter-button {
     bottom: calc(env(safe-area-inset-bottom, 0px) + 8.5rem);
+    width: 5.5rem;
+    height: 5.5rem;
+    background: rgba(46, 125, 50, 0.92);
+  }
+
+  .honk-button {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 15rem);
     width: 4.25rem;
     height: 4.25rem;
     background: rgba(245, 124, 0, 0.92);
+  }
+
+  .jump-button,
+  .fly-button {
+    right: calc(env(safe-area-inset-right, 0px) + 7.75rem);
+    width: 4.25rem;
+    height: 4.25rem;
+    background: rgba(123, 31, 162, 0.9);
+  }
+
+  .jump-button {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 2.2rem);
+  }
+
+  .fly-button {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 7.6rem);
+    background: rgba(198, 40, 40, 0.92);
   }
 }
 

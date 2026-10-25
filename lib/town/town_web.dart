@@ -18,6 +18,13 @@ const _rideSprintSpeed = 11.0;
 /// How close he must be to the parked bicycle to get on.
 const _mountDistance = 3.5;
 
+// Jumping and flying. Heights are in world units above the ground.
+const _gravity = 24.0;
+const _jumpSpeed = 9.0;
+const _cruiseHeight = 10.5;
+const _flySpeed = 13.0;
+const _flySprintSpeed = 24.0;
+
 /// How close he must be to a house's glowing ring to go in.
 const _enterDistance = 2.4;
 
@@ -52,12 +59,18 @@ class _Town {
   final _anchor = vec3(0, 0, 0);
   bool riding = false;
 
+  // Vertical state: height above the ground, vertical speed, and flight.
+  double altitude = 0, vy = 0;
+  bool flying = false;
+  late final Object3D shadow;
+  late final web.HTMLElement enterPrompt;
+
   // Touch controls.
-  late final web.HTMLElement _joyKnob, _joyPad, _rideButton, _honkButton, honkLabel;
+  late final web.HTMLElement _joyKnob, _joyPad, _rideButton, _enterButton, _honkButton, _flyButton, honkLabel;
   int? _joyPointer;
   double _joyX = 0, _joyY = 0; // -1..1, screen space (up is negative y)
   double _honkUntil = 0;
-  web.AudioContext? _audio;
+  late final web.HTMLAudioElement _honkSound;
 
   double? targetX, targetZ;
   double heading = 0;
@@ -88,10 +101,20 @@ class _Town {
     bike.root.scale.set(Stickman.scale, Stickman.scale, Stickman.scale);
     scene.add(bike.root);
 
+    shadow = blobShadow(0.9);
+    shadow.visible = false;
+    scene.add(shadow);
+
+    _honkSound = web.HTMLAudioElement()
+      ..src = 'audio/honk.mp3'
+      ..preload = 'auto';
+
+    enterPrompt = web.document.createElement('div') as web.HTMLElement..className = 'prompt prompt-hidden';
+    container.append(enterPrompt);
     prompt = web.document.createElement('div') as web.HTMLElement..className = 'prompt prompt-hidden';
     container.append(prompt);
     honkLabel = web.document.createElement('div') as web.HTMLElement..className = 'prompt prompt-hidden honk';
-    honkLabel.textContent = 'Beep beep!';
+    honkLabel.textContent = 'Honk!';
     container.append(honkLabel);
     _buildControls();
 
@@ -109,8 +132,21 @@ class _Town {
           if ((k == 'e' || k == 'escape') && !e.repeat) overlay.close();
           return;
         }
-        if (k == 'e' && !e.repeat) _interact();
-        if (k == 'p' && !e.repeat) _honk();
+        if (!e.repeat) {
+          switch (k) {
+            case 'e':
+              _enterHouse();
+            case 'r':
+              _toggleBike();
+            case 'f':
+              _toggleFly();
+            case 'p':
+              _honk();
+            case ' ':
+              _jump();
+          }
+        }
+        if (k == ' ') e.preventDefault(); // don't scroll the page
         if (_moveKeys.contains(k)) {
           keys.add(k);
           targetX = targetZ = null;
@@ -154,9 +190,11 @@ class _Town {
     return math.sqrt(dx * dx + dz * dz);
   }
 
-  /// The house door he is standing at, if any (not while riding).
+  bool get _onGround => !flying && altitude < 0.5;
+
+  /// The house door he is standing at, if any. Works on foot or on the bike.
   Entrance? get _nearEntrance {
-    if (riding) return null;
+    if (!_onGround) return null;
     final p = stickman.root.position;
     for (final e in village.entrances) {
       final dx = p.x - e.x, dz = p.z - e.z;
@@ -165,24 +203,44 @@ class _Town {
     return null;
   }
 
-  /// What E (or the action button) would do right now.
-  String? get _action {
+  /// What R would do right now: 'Ride', 'Get off', or null.
+  String? get _bikeAction {
+    if (flying) return null;
     if (riding) return 'Get off';
-    if (_distanceToBike < _mountDistance) return 'Ride';
-    if (_nearEntrance != null) return 'Enter';
+    if (_onGround && _distanceToBike < _mountDistance) return 'Ride';
     return null;
   }
 
-  /// E: get on or off the bicycle, or go into the house at the door.
-  void _interact() {
-    switch (_action) {
+  /// R: get on or off the bicycle.
+  void _toggleBike() {
+    if (overlay.isOpen) return;
+    switch (_bikeAction) {
       case 'Get off':
         _dismount();
       case 'Ride':
         _mount();
-      case 'Enter':
-        _enter(_nearEntrance!);
     }
+  }
+
+  /// E: go into the house at the door (also while riding).
+  void _enterHouse() {
+    final e = _nearEntrance;
+    if (e != null && !overlay.isOpen) _enter(e);
+  }
+
+  /// Space: jump, on foot or on the bike.
+  void _jump() {
+    if (overlay.isOpen || flying || altitude > 0.05) return;
+    vy = _jumpSpeed;
+  }
+
+  /// F: take off in the Superman pose, or come back down to walk.
+  void _toggleFly() {
+    if (overlay.isOpen) return;
+    if (riding) riding = false; // leaves the bike parked where it is
+    flying = !flying;
+    targetX = targetZ = null;
+    vy = 0;
   }
 
   void _mount() {
@@ -218,26 +276,48 @@ class _Town {
     overlay.open(e.id);
   }
 
-  /// Shows the E prompt above whatever E would act on.
+  /// After landing from a flight, step out of any house, wall or tree below.
+  void _unstick() {
+    final p = stickman.root.position;
+    if (!isBlocked(p.x, p.z)) return;
+    for (var r = 0.5; r <= 14; r += 0.5) {
+      for (var i = 0; i < 16; i++) {
+        final a = i * math.pi / 8;
+        final x = p.x + math.sin(a) * r, z = p.z + math.cos(a) * r;
+        if (!isBlocked(x, z)) {
+          p.x = x;
+          p.z = z;
+          return;
+        }
+      }
+    }
+  }
+
+  /// Shows a key prompt above whatever R and E would act on right now.
   void _updatePrompt() {
     final honking = riding && lastTime / 1000 < _honkUntil;
     honkLabel.classList.toggle('prompt-hidden', !honking);
-    if (honking) _place(honkLabel, stickman.root.position, stickman.root.position.y + 4.0);
+    final p = stickman.root.position;
+    if (honking) _place(honkLabel, p, p.y + 4.0);
 
-    final action = overlay.isOpen ? null : _action;
-    prompt.classList.toggle('prompt-hidden', action == null);
-    if (action == null) return;
+    final bike = _bikeAction;
+    prompt.classList.toggle('prompt-hidden', bike == null || overlay.isOpen);
+    if (bike != null) {
+      prompt.textContent = bike == 'Ride' ? 'Press R to ride' : 'Press R to get off';
+      final bp = this.bike.root.position;
+      if (bike == 'Ride') {
+        _place(prompt, bp, bp.y + 2.4);
+      } else {
+        _place(prompt, p, p.y + 3.3);
+      }
+    }
+
+    // The entrance prompt sits higher so the two never overlap.
     final entrance = _nearEntrance;
-    prompt.textContent = switch (action) {
-      'Get off' => 'Press E to get off',
-      'Ride' => 'Press E to ride',
-      _ => 'Press E to enter ${entrance!.label}',
-    };
-    final bikePos = bike.root.position, p = stickman.root.position;
-    if (action == 'Ride') {
-      _place(prompt, bikePos, bikePos.y + 2.4);
-    } else {
-      _place(prompt, p, p.y + (riding ? 3.3 : 3.0));
+    enterPrompt.classList.toggle('prompt-hidden', entrance == null || overlay.isOpen);
+    if (entrance != null) {
+      enterPrompt.textContent = 'Press E to enter ${entrance.label}';
+      _place(enterPrompt, p, p.y + 5.2);
     }
   }
 
@@ -297,8 +377,11 @@ class _Town {
       );
     }
 
-    _rideButton = _tapButton('ride-button hidden', 'Ride', _interact);
+    _rideButton = _tapButton('ride-button hidden', 'Ride', _toggleBike);
+    _enterButton = _tapButton('enter-button hidden', 'Enter', _enterHouse);
     _honkButton = _tapButton('honk-button hidden', 'Honk', _honk);
+    _tapButton('jump-button', 'Jump', _jump);
+    _flyButton = _tapButton('fly-button', 'Fly', _toggleFly);
   }
 
   web.HTMLElement _tapButton(String className, String label, void Function() onTap) {
@@ -331,38 +414,24 @@ class _Town {
   }
 
   void _updateButtons() {
-    final action = overlay.isOpen ? null : _action;
-    _rideButton.classList.toggle('hidden', action == null);
-    if (action != null) _rideButton.textContent = action;
+    final bike = overlay.isOpen ? null : _bikeAction;
+    _rideButton.classList.toggle('hidden', bike == null);
+    if (bike != null) _rideButton.textContent = bike;
+    final canEnter = !overlay.isOpen && _nearEntrance != null;
+    _enterButton.classList.toggle('hidden', !canEnter);
     _honkButton.classList.toggle('hidden', !riding);
+    _flyButton.textContent = flying ? 'Land' : 'Fly';
   }
 
   // --- Horn -------------------------------------------------------------
 
-  /// P (or the Honk button): two quick bicycle-horn blasts while riding.
+  /// P (or the Honk button): plays the horn while riding.
   void _honk() {
-    if (!riding) return;
-    final ctx = _audio ??= web.AudioContext();
-    ctx.resume();
-    final now = ctx.currentTime;
-    for (final start in [0.0, 0.24]) {
-      final gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.0001, now + start);
-      gain.gain.linearRampToValueAtTime(0.22, now + start + 0.02);
-      gain.gain.setValueAtTime(0.22, now + start + 0.14);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + start + 0.2);
-      gain.connect(ctx.destination);
-      // Two slightly detuned notes make it sound like a horn rather than a beep.
-      for (final freq in [392.0, 494.0]) {
-        final osc = ctx.createOscillator();
-        osc.type = 'sawtooth';
-        osc.frequency.value = freq;
-        osc.connect(gain);
-        osc.start(now + start);
-        osc.stop(now + start + 0.21);
-      }
-    }
-    _honkUntil = lastTime / 1000 + 0.9;
+    if (!riding || overlay.isOpen) return;
+    _honkSound.currentTime = 0;
+    // Browsers may refuse until the page has had a user gesture; ignore that.
+    _honkSound.play().toDart.catchError((Object _) => null);
+    _honkUntil = lastTime / 1000 + 0.7;
   }
 
   void _click(web.PointerEvent e) {
@@ -423,11 +492,19 @@ class _Town {
       final len = math.sqrt(dx * dx + dz * dz);
       dx /= len;
       dz /= len;
-      final speed = riding
-          ? (sprinting ? _rideSprintSpeed : _rideSpeed)
-          : (sprinting ? _sprintSpeed : _walkSpeed);
-      // Slides along walls, houses and trees; the stairs are the way up.
-      final next = moveWithin(pos.x, pos.z, dx * speed * dt, dz * speed * dt);
+      final speed = flying
+          ? (sprinting ? _flySprintSpeed : _flySpeed)
+          : riding
+              ? (sprinting ? _rideSprintSpeed : _rideSpeed)
+              : (sprinting ? _sprintSpeed : _walkSpeed);
+      // On the ground he slides along walls, houses and trees (the stairs are
+      // the way up); in the air he flies over everything inside the village limits.
+      final next = flying
+          ? (
+              x: inWorld(pos.x + dx * speed * dt, pos.z) ? pos.x + dx * speed * dt : pos.x,
+              z: inWorld(pos.x, pos.z + dz * speed * dt) ? pos.z + dz * speed * dt : pos.z,
+            )
+          : moveWithin(pos.x, pos.z, dx * speed * dt, dz * speed * dt);
       final moved = math.sqrt((next.x - pos.x) * (next.x - pos.x) + (next.z - pos.z) * (next.z - pos.z));
       pos.x = next.x;
       pos.z = next.z;
@@ -446,21 +523,53 @@ class _Town {
       heading += diff * math.min(1, dt * 12);
       stickman.root.rotation.y = heading;
     }
-    pos.y = heightAt(pos.x, pos.z);
+
+    // Vertical motion: jump arc, or a smooth climb to cruising height in flight.
+    final ground = heightAt(pos.x, pos.z);
+    final wasAirborne = altitude > 0;
+    if (flying) {
+      altitude += (_cruiseHeight - altitude) * math.min(1, dt * 2.5);
+    } else {
+      vy = math.max(vy - _gravity * dt, -12.0);
+      altitude += vy * dt;
+      if (altitude <= 0) {
+        altitude = 0;
+        vy = 0;
+        if (wasAirborne) _unstick(); // came down on a house or wall
+      }
+    }
+    pos.y = ground + altitude;
     if (riding) {
       bike.root.position.set(pos.x, pos.y, pos.z);
       bike.root.rotation.y = heading;
     }
-    stickman.animate(t, moving, sprint: sprinting, riding: riding, crank: bike.crank);
+
+    // A shadow on the ground shows how high he is.
+    shadow.visible = altitude > 0.05;
+    final shadowSize = math.max(0.35, 1 - altitude * 0.06) * (riding ? 1.7 : 1.0);
+    shadow.scale.set(shadowSize, shadowSize, shadowSize);
+    shadow.position.set(pos.x, ground + 0.14, pos.z);
+
+    stickman.animate(
+      t,
+      moving,
+      sprint: sprinting,
+      riding: riding,
+      crank: bike.crank,
+      airborne: altitude > 0.05 && !flying,
+      flying: flying,
+    );
 
     // Chase camera.
     final k = math.min(1, dt * (sprinting && moving ? 6 : 4));
     camera.position.x += (pos.x - camera.position.x) * k;
     // Pull the camera back on tall (portrait) screens so the scene still fits.
     final zoom = camera.aspect < 1 ? 1 + (1 - camera.aspect) * 0.9 : 1.0;
-    camera.position.y += (pos.y + 8.5 * zoom - camera.position.y) * k;
+    // In flight the camera only follows part of the way up, so the ground stays in view.
+    final focus = pos.y - altitude * 0.5;
+    camera.position.y += (focus + 8.5 * zoom - camera.position.y) * k;
     camera.position.z += (pos.z + 11 * zoom - camera.position.z) * k;
-    camera.lookAt(pos.x, pos.y + 1.8, pos.z);
+    camera.lookAt(pos.x, focus + 1.8, pos.z);
     stickman.updateFace(camera);
     _updatePrompt();
     _updateButtons();
