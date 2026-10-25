@@ -6,8 +6,7 @@
 
 import 'package:jaspr/client.dart';
 
-import 'package:portfolio/components/work_section.dart'
-    deferred as _work_section;
+import 'package:portfolio/components/town_scene.dart' deferred as _town_scene;
 
 /// Default [ClientOptions] for use with your Jaspr project.
 ///
@@ -27,9 +26,9 @@ import 'package:portfolio/components/work_section.dart'
 /// ```
 ClientOptions get defaultClientOptions => ClientOptions(
   clients: {
-    'work_section': ClientLoader(
-      (p) => _work_section.WorkSection(),
-      loader: _work_section.loadLibrary,
+    'town_scene': ClientLoader(
+      (p) => _town_scene.TownScene(),
+      loader: _town_scene.loadLibrary,
     ),
   },
 );
