@@ -1,4 +1,5 @@
 import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
 import 'dart:math' as math;
 
 import 'package:web/web.dart' as web;
@@ -421,19 +422,25 @@ class _Town {
       ((web.PointerEvent e) {
         e.preventDefault();
         _joyPointer = e.pointerId;
-        _joyPad.setPointerCapture(e.pointerId);
+        // Capture keeps the drag going outside the pad, but some browsers throw
+        // if the pointer isn't active; the pad must still work then.
+        try {
+          _joyPad.setPointerCapture(e.pointerId);
+        } catch (_) {}
         targetX = targetZ = null;
         _moveJoy(e);
       }).toJS,
     );
-    _joyPad.addEventListener(
+    // Moves and releases are listened for on the window, so the drag keeps
+    // working however the browser routes the touch once the finger leaves the pad.
+    web.window.addEventListener(
       'pointermove',
       ((web.PointerEvent e) {
         if (e.pointerId == _joyPointer) _moveJoy(e);
       }).toJS,
     );
     for (final type in ['pointerup', 'pointercancel']) {
-      _joyPad.addEventListener(
+      web.window.addEventListener(
         type,
         ((web.PointerEvent e) {
           if (e.pointerId != _joyPointer) return;
@@ -464,11 +471,17 @@ class _Town {
     return b;
   }
 
+  // package:web types a pointer's clientX/clientY as `int`, but touch screens
+  // report fractional values. Debug builds enforce `int` and throw, so read
+  // them as plain numbers instead.
+  double _clientX(web.PointerEvent e) => e.getProperty<JSNumber>('clientX'.toJS).toDartDouble;
+  double _clientY(web.PointerEvent e) => e.getProperty<JSNumber>('clientY'.toJS).toDartDouble;
+
   void _moveJoy(web.PointerEvent e) {
     final r = _joyPad.getBoundingClientRect();
     final radius = r.width / 2;
-    var vx = (e.clientX - (r.left + radius)) / radius;
-    var vy = (e.clientY - (r.top + radius)) / radius;
+    var vx = (_clientX(e) - (r.left + radius)) / radius;
+    var vy = (_clientY(e) - (r.top + radius)) / radius;
     final len = math.sqrt(vx * vx + vy * vy);
     if (len > 1) {
       vx /= len;
@@ -503,8 +516,8 @@ class _Town {
 
   void _click(web.PointerEvent e) {
     final rect = renderer.domElement.getBoundingClientRect();
-    final nx = (e.clientX - rect.left) / rect.width * 2 - 1;
-    final ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    final nx = (_clientX(e) - rect.left) / rect.width * 2 - 1;
+    final ny = -((_clientY(e) - rect.top) / rect.height) * 2 + 1;
     if (overlay.isOpen) return;
     final hit = picker.pick(camera, village.walkable, nx, ny);
     if (hit != null) {

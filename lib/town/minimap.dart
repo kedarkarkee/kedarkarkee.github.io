@@ -109,6 +109,8 @@ class Minimap {
   void _draw(double x, double z, double heading, ({double x, double z}) bike, bool riding) {
     final ctx = _ctx;
     final n = _night;
+    // On a phone the map is shown very small, so draw the markers bigger.
+    final k = web.window.matchMedia('(pointer: coarse), (max-width: 600px)').matches ? 1.45 : 1.0;
     _screenSpace();
     ctx.clearRect(0, 0, _size, _size);
 
@@ -177,13 +179,13 @@ class Minimap {
     _screenSpace();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = 'bold 17px sans-serif';
+    ctx.font = 'bold ${(17 * k).round()}px sans-serif';
     for (final entry in enterable.entries) {
       final b = blocks[entry.key];
       final badge = _badges[entry.value.id]!;
       final cx = _px((b.x0 + b.x1) / 2, (b.z0 + b.z1) / 2), cy = _py((b.x0 + b.x1) / 2, (b.z0 + b.z1) / 2);
       ctx.beginPath();
-      ctx.arc(cx, cy, 14, 0, math.pi * 2);
+      ctx.arc(cx, cy, 14 * k, 0, math.pi * 2);
       _fill(_css(badge.$1));
       ctx.fill();
       ctx.lineWidth = 3;
@@ -197,24 +199,24 @@ class Minimap {
     if (!riding) {
       final bx = _px(bike.x, bike.z), by = _py(bike.x, bike.z);
       _fill('#ffd54f');
-      ctx.fillRect(bx - 6, by - 6, 12, 12);
+      ctx.fillRect(bx - 6 * k, by - 6 * k, 12 * k, 12 * k);
       ctx.lineWidth = 2;
       _stroke('#3b2a1d');
-      ctx.strokeRect(bx - 6, by - 6, 12, 12);
+      ctx.strokeRect(bx - 6 * k, by - 6 * k, 12 * k, 12 * k);
     }
 
     // The character: a dot with an arrow for the way he faces.
     final cx = _px(x, z), cy = _py(x, z);
     final dx = math.sin(heading - _a), dy = math.cos(heading - _a);
     ctx.beginPath();
-    ctx.moveTo(cx + dx * 17, cy + dy * 17);
-    ctx.lineTo(cx - dy * 8 + dx * 3, cy + dx * 8 + dy * 3);
-    ctx.lineTo(cx + dy * 8 + dx * 3, cy - dx * 8 + dy * 3);
+    ctx.moveTo(cx + dx * 17 * k, cy + dy * 17 * k);
+    ctx.lineTo(cx - dy * 8 * k + dx * 3 * k, cy + dx * 8 * k + dy * 3 * k);
+    ctx.lineTo(cx + dy * 8 * k + dx * 3 * k, cy - dx * 8 * k + dy * 3 * k);
     ctx.closePath();
     _fill('#ff3d3d');
     ctx.fill();
     ctx.beginPath();
-    ctx.arc(cx, cy, 8, 0, math.pi * 2);
+    ctx.arc(cx, cy, 8 * k, 0, math.pi * 2);
     _fill('#ffffff');
     ctx.fill();
     ctx.lineWidth = 3.5;
