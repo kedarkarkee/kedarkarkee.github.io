@@ -99,8 +99,8 @@ html, body {
     position: fixed;
     left: calc(env(safe-area-inset-left, 0px) + 1.25rem);
     bottom: calc(env(safe-area-inset-bottom, 0px) + 1.5rem);
-    width: 9rem;
-    height: 9rem;
+    width: 8.5rem;
+    height: 8.5rem;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.28);
     border: 2px solid rgba(255, 255, 255, 0.65);
@@ -135,32 +135,44 @@ html, body {
     touch-action: none;
   }
 
+  /* Jump and Fly sit on the right edge; the contextual buttons are one column in. */
+  .jump-button,
+  .fly-button {
+    right: calc(env(safe-area-inset-right, 0px) + 1rem);
+    width: 4.4rem;
+    height: 4.4rem;
+  }
+
+  .jump-button {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 2.2rem);
+    background: rgba(123, 31, 162, 0.9);
+  }
+
+  .fly-button {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 7.6rem);
+    background: rgba(198, 40, 40, 0.92);
+  }
+
+  .ride-button,
+  .enter-button,
+  .honk-button {
+    right: calc(env(safe-area-inset-right, 0px) + 6.2rem);
+    width: 4.8rem;
+    height: 4.8rem;
+  }
+
   .ride-button {
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 2rem);
-    width: 5.5rem;
-    height: 5.5rem;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 2.2rem);
   }
 
   .enter-button {
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 8.5rem);
-    width: 5.5rem;
-    height: 5.5rem;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 7.6rem);
     background: rgba(46, 125, 50, 0.92);
   }
 
   .honk-button {
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 15rem);
-    width: 4.25rem;
-    height: 4.25rem;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 13rem);
     background: rgba(245, 124, 0, 0.92);
-  }
-
-  .jump-button,
-  .fly-button {
-    right: calc(env(safe-area-inset-right, 0px) + 7.75rem);
-    width: 4.25rem;
-    height: 4.25rem;
-    background: rgba(123, 31, 162, 0.9);
   }
 
   .jump-button {
@@ -556,7 +568,7 @@ html, body {
   pointer-events: none;
 }
 
-.minimap-canvas {
+.minimap .minimap-canvas {
   width: 11rem;
   height: 11rem;
   border-radius: 50%;
@@ -597,9 +609,9 @@ html, body {
 }
 
 @media (pointer: coarse), (max-width: 600px) {
-  .minimap-canvas {
-    width: 7.5rem;
-    height: 7.5rem;
+  .minimap .minimap-canvas {
+    width: 5.4rem;
+    height: 5.4rem;
   }
 
   .minimap-legend {

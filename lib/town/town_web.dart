@@ -421,19 +421,25 @@ class _Town {
       ((web.PointerEvent e) {
         e.preventDefault();
         _joyPointer = e.pointerId;
-        _joyPad.setPointerCapture(e.pointerId);
+        // Capture keeps the drag going outside the pad, but some browsers throw
+        // if the pointer isn't active; the pad must still work then.
+        try {
+          _joyPad.setPointerCapture(e.pointerId);
+        } catch (_) {}
         targetX = targetZ = null;
         _moveJoy(e);
       }).toJS,
     );
-    _joyPad.addEventListener(
+    // Moves and releases are listened for on the window, so the drag keeps
+    // working however the browser routes the touch once the finger leaves the pad.
+    web.window.addEventListener(
       'pointermove',
       ((web.PointerEvent e) {
         if (e.pointerId == _joyPointer) _moveJoy(e);
       }).toJS,
     );
     for (final type in ['pointerup', 'pointercancel']) {
-      _joyPad.addEventListener(
+      web.window.addEventListener(
         type,
         ((web.PointerEvent e) {
           if (e.pointerId != _joyPointer) return;
