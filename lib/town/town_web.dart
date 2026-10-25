@@ -4,20 +4,22 @@ import 'dart:math' as math;
 import 'package:web/web.dart' as web;
 
 import 'bicycle.dart';
+import 'overlay.dart';
 import 'stickman.dart';
+import 'terrain.dart';
 import 'three.dart';
+import 'village.dart';
 
-/// A house/tree footprint the character cannot walk through.
-typedef Obstacle = ({double x, double z, double r});
-
-const _bound = 38.0;
-const _walkSpeed = 5.5;
-const _sprintSpeed = 11.0;
-const _rideSpeed = 10.0;
-const _rideSprintSpeed = 15.0;
+const _walkSpeed = 3.8;
+const _sprintSpeed = 7.5;
+const _rideSpeed = 7.0;
+const _rideSprintSpeed = 11.0;
 
 /// How close he must be to the parked bicycle to get on.
 const _mountDistance = 3.5;
+
+/// How close he must be to a house's glowing ring to go in.
+const _enterDistance = 2.4;
 
 Future<void> startTown(String containerId) async {
   final container = await _waitFor(containerId);
@@ -39,11 +41,11 @@ class _Town {
   final web.HTMLElement container;
   final scene = Scene();
   final renderer = Renderer();
-  final camera = Camera.perspective(50, 1, 0.1, 200);
+  final camera = Camera.perspective(50, 1, 0.1, 600);
   final picker = Picker();
   final keys = <String>{};
-  final obstacles = <Obstacle>[];
-  late final Object3D ground;
+  late final Village village;
+  late final Overlay overlay;
   late final Stickman stickman;
   final bike = Bicycle();
   late final web.HTMLElement prompt;
@@ -63,22 +65,27 @@ class _Town {
   double lastTime = 0;
 
   void start() {
-    scene.background = color(0x9ad8ff);
-    scene.fog = fog(0x9ad8ff, 40, 110);
-    scene.add(hemisphereLight(0xffffff, 0x6b8f5a, 1.6));
-    final sun = light('DirectionalLight', 0xfff2d0, 2.2);
-    sun.position.set(20, 30, 10);
+    // Hazy mountain-air blue, with distant hills fading into it.
+    scene.background = color(0xb7d9f0);
+    scene.fog = fog(0xb7d9f0, 90, 320);
+    scene.add(hemisphereLight(0xffffff, 0x7d9a5f, 1.7));
+    final sun = light('DirectionalLight', 0xfff0d0, 2.3);
+    sun.position.set(-30, 50, 40);
     scene.add(sun);
 
-    _buildTown();
+    village = Village();
+    scene.add(village.root);
+    overlay = Overlay(container)..onClose = () => keys.clear();
+
     stickman = Stickman();
-    stickman.root.position.set(0, 0, 8);
+    stickman.root.position.set(0, 0, 14);
     scene.add(stickman.root);
     scene.add(stickman.face);
 
-    // Parked beside the road, lying along the x axis.
-    bike.root.position.set(5, 0, 9);
+    // Parked on the path by the village entrance, lying along the x axis.
+    bike.root.position.set(6, 0, 14);
     bike.root.rotation.y = math.pi / 2;
+    bike.root.scale.set(Stickman.scale, Stickman.scale, Stickman.scale);
     scene.add(bike.root);
 
     prompt = web.document.createElement('div') as web.HTMLElement..className = 'prompt prompt-hidden';
@@ -98,7 +105,11 @@ class _Town {
       ((web.KeyboardEvent e) {
         sprint = e.shiftKey;
         final k = e.key.toLowerCase();
-        if (k == 'e' && !e.repeat) _toggleBike();
+        if (overlay.isOpen) {
+          if ((k == 'e' || k == 'escape') && !e.repeat) overlay.close();
+          return;
+        }
+        if (k == 'e' && !e.repeat) _interact();
         if (k == 'p' && !e.repeat) _honk();
         if (_moveKeys.contains(k)) {
           keys.add(k);
@@ -143,35 +154,91 @@ class _Town {
     return math.sqrt(dx * dx + dz * dz);
   }
 
-  /// E: get on the bicycle when standing next to it, or get off.
-  void _toggleBike() {
-    if (riding) {
-      riding = false;
-      // Step off to the side the bike is facing away from its left.
-      final h = bike.root.rotation.y;
-      stickman.root.position.x += math.cos(h) * 2.2;
-      stickman.root.position.z -= math.sin(h) * 2.2;
-      targetX = targetZ = null;
-    } else if (_distanceToBike < _mountDistance) {
-      riding = true;
-      stickman.root.position.set(bike.root.position.x, 0, bike.root.position.z);
-      heading = bike.root.rotation.y;
-      stickman.root.rotation.y = heading;
-      targetX = targetZ = null;
+  /// The house door he is standing at, if any (not while riding).
+  Entrance? get _nearEntrance {
+    if (riding) return null;
+    final p = stickman.root.position;
+    for (final e in village.entrances) {
+      final dx = p.x - e.x, dz = p.z - e.z;
+      if (dx * dx + dz * dz < _enterDistance * _enterDistance) return e;
+    }
+    return null;
+  }
+
+  /// What E (or the action button) would do right now.
+  String? get _action {
+    if (riding) return 'Get off';
+    if (_distanceToBike < _mountDistance) return 'Ride';
+    if (_nearEntrance != null) return 'Enter';
+    return null;
+  }
+
+  /// E: get on or off the bicycle, or go into the house at the door.
+  void _interact() {
+    switch (_action) {
+      case 'Get off':
+        _dismount();
+      case 'Ride':
+        _mount();
+      case 'Enter':
+        _enter(_nearEntrance!);
     }
   }
 
-  /// Shows the E prompt above the bike (to mount) or the rider (to dismount).
+  void _mount() {
+    riding = true;
+    final p = bike.root.position;
+    stickman.root.position.set(p.x, p.y, p.z);
+    heading = bike.root.rotation.y;
+    stickman.root.rotation.y = heading;
+    targetX = targetZ = null;
+  }
+
+  void _dismount() {
+    riding = false;
+    targetX = targetZ = null;
+    // Step off to either side of the bike, whichever is open.
+    final h = bike.root.rotation.y;
+    final p = stickman.root.position;
+    for (final side in [2.2, -2.2]) {
+      final x = p.x + math.cos(h) * side, z = p.z - math.sin(h) * side;
+      if (!isBlocked(x, z)) {
+        p.x = x;
+        p.z = z;
+        return;
+      }
+    }
+  }
+
+  void _enter(Entrance e) {
+    keys.clear();
+    _joyX = _joyY = 0;
+    _joyKnob.style.transform = 'translate(-50%, -50%)';
+    targetX = targetZ = null;
+    overlay.open(e.id);
+  }
+
+  /// Shows the E prompt above whatever E would act on.
   void _updatePrompt() {
     final honking = riding && lastTime / 1000 < _honkUntil;
     honkLabel.classList.toggle('prompt-hidden', !honking);
-    if (honking) _place(honkLabel, stickman.root.position, 6.2);
+    if (honking) _place(honkLabel, stickman.root.position, stickman.root.position.y + 4.0);
 
-    final show = riding || _distanceToBike < _mountDistance;
-    prompt.classList.toggle('prompt-hidden', !show);
-    if (!show) return;
-    prompt.textContent = riding ? 'Press E to get off' : 'Press E to ride';
-    _place(prompt, riding ? stickman.root.position : bike.root.position, riding ? 4.9 : 3.4);
+    final action = overlay.isOpen ? null : _action;
+    prompt.classList.toggle('prompt-hidden', action == null);
+    if (action == null) return;
+    final entrance = _nearEntrance;
+    prompt.textContent = switch (action) {
+      'Get off' => 'Press E to get off',
+      'Ride' => 'Press E to ride',
+      _ => 'Press E to enter ${entrance!.label}',
+    };
+    final bikePos = bike.root.position, p = stickman.root.position;
+    if (action == 'Ride') {
+      _place(prompt, bikePos, bikePos.y + 2.4);
+    } else {
+      _place(prompt, p, p.y + (riding ? 3.3 : 3.0));
+    }
   }
 
   /// Positions [el] on screen above the world point [p] at height [y].
@@ -230,7 +297,7 @@ class _Town {
       );
     }
 
-    _rideButton = _tapButton('ride-button hidden', 'Ride', _toggleBike);
+    _rideButton = _tapButton('ride-button hidden', 'Ride', _interact);
     _honkButton = _tapButton('honk-button hidden', 'Honk', _honk);
   }
 
@@ -264,9 +331,9 @@ class _Town {
   }
 
   void _updateButtons() {
-    final canRide = riding || _distanceToBike < _mountDistance;
-    _rideButton.classList.toggle('hidden', !canRide);
-    _rideButton.textContent = riding ? 'Get off' : 'Ride';
+    final action = overlay.isOpen ? null : _action;
+    _rideButton.classList.toggle('hidden', action == null);
+    if (action != null) _rideButton.textContent = action;
     _honkButton.classList.toggle('hidden', !riding);
   }
 
@@ -302,10 +369,11 @@ class _Town {
     final rect = renderer.domElement.getBoundingClientRect();
     final nx = (e.clientX - rect.left) / rect.width * 2 - 1;
     final ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-    final hit = picker.pick(camera, ground, nx, ny);
+    if (overlay.isOpen) return;
+    final hit = picker.pick(camera, village.walkable, nx, ny);
     if (hit != null) {
-      targetX = hit.x.clamp(-_bound, _bound);
-      targetZ = hit.z.clamp(-_bound, _bound);
+      targetX = hit.x;
+      targetZ = hit.z;
     }
   }
 
@@ -326,12 +394,17 @@ class _Town {
 
     // The virtual pad is analog in direction; pushing it to the edge sprints.
     final joyLen = math.sqrt(_joyX * _joyX + _joyY * _joyY);
-    final joyActive = dx == 0 && dz == 0 && joyLen > 0.15;
+    final joyActive = dx == 0 && dz == 0 && joyLen > 0.15 && !overlay.isOpen;
     if (joyActive) {
       dx = _joyX;
       dz = _joyY;
     }
     final sprinting = sprint || (joyActive && joyLen > 0.85);
+
+    if (overlay.isOpen) {
+      dx = dz = 0;
+      targetX = targetZ = null;
+    }
 
     final pos = stickman.root.position;
     if (dx == 0 && dz == 0 && targetX != null) {
@@ -353,20 +426,14 @@ class _Town {
       final speed = riding
           ? (sprinting ? _rideSprintSpeed : _rideSpeed)
           : (sprinting ? _sprintSpeed : _walkSpeed);
-      var nx = (pos.x + dx * speed * dt).clamp(-_bound, _bound);
-      var nz = (pos.z + dz * speed * dt).clamp(-_bound, _bound);
-      for (final o in obstacles) {
-        final ox = nx - o.x, oz = nz - o.z;
-        final d = math.sqrt(ox * ox + oz * oz);
-        if (d < o.r && d > 0) {
-          nx = o.x + ox / d * o.r;
-          nz = o.z + oz / d * o.r;
-        }
-      }
-      final moved = math.sqrt((nx - pos.x) * (nx - pos.x) + (nz - pos.z) * (nz - pos.z));
-      pos.x = nx;
-      pos.z = nz;
-      if (riding) bike.roll(moved);
+      // Slides along walls, houses and trees; the stairs are the way up.
+      final next = moveWithin(pos.x, pos.z, dx * speed * dt, dz * speed * dt);
+      final moved = math.sqrt((next.x - pos.x) * (next.x - pos.x) + (next.z - pos.z) * (next.z - pos.z));
+      pos.x = next.x;
+      pos.z = next.z;
+      if (riding) bike.roll(moved / Stickman.scale);
+      // Gave up on a click target we can't reach (a wall in the way).
+      if (moved < speed * dt * 0.1) targetX = targetZ = null;
 
       // Turn smoothly towards the direction of travel.
       var diff = math.atan2(dx, dz) - heading;
@@ -379,8 +446,9 @@ class _Town {
       heading += diff * math.min(1, dt * 12);
       stickman.root.rotation.y = heading;
     }
+    pos.y = heightAt(pos.x, pos.z);
     if (riding) {
-      bike.root.position.set(pos.x, 0, pos.z);
+      bike.root.position.set(pos.x, pos.y, pos.z);
       bike.root.rotation.y = heading;
     }
     stickman.animate(t, moving, sprint: sprinting, riding: riding, crank: bike.crank);
@@ -390,76 +458,11 @@ class _Town {
     camera.position.x += (pos.x - camera.position.x) * k;
     // Pull the camera back on tall (portrait) screens so the scene still fits.
     final zoom = camera.aspect < 1 ? 1 + (1 - camera.aspect) * 0.9 : 1.0;
-    camera.position.y += (8.5 * zoom - camera.position.y) * k;
+    camera.position.y += (pos.y + 8.5 * zoom - camera.position.y) * k;
     camera.position.z += (pos.z + 11 * zoom - camera.position.z) * k;
-    camera.lookAt(pos.x, 1.8, pos.z);
+    camera.lookAt(pos.x, pos.y + 1.8, pos.z);
     stickman.updateFace(camera);
     _updatePrompt();
     _updateButtons();
-  }
-
-  // --- Town -----------------------------------------------------------
-
-  void _buildTown() {
-    ground = mesh('Plane', [120, 120], 0x7cc46b);
-    ground.rotation.x = -math.pi / 2;
-    scene.add(ground);
-
-    // Crossing roads.
-    for (final (w, d) in [(7.0, 120.0), (120.0, 7.0)]) {
-      final road = mesh('Plane', [w, d], 0x5d5f66);
-      road.rotation.x = -math.pi / 2;
-      road.position.y = 0.02;
-      scene.add(road);
-    }
-
-    const houseColors = [0xf6c85f, 0xe76f51, 0xf4a261, 0xa8dadc, 0xe9c46a, 0xb5838d];
-    var i = 0;
-    for (final x in [-24.0, -12.0, 12.0, 24.0]) {
-      for (final z in [-22.0, -10.0, 12.0, 24.0]) {
-        _house(x, z, houseColors[i++ % houseColors.length]);
-      }
-    }
-
-    final rng = math.Random(7);
-    for (var n = 0; n < 40; n++) {
-      final x = rng.nextDouble() * 76 - 38, z = rng.nextDouble() * 76 - 38;
-      // Keep the roads and house plots clear.
-      if (x.abs() < 6 || z.abs() < 6) continue;
-      if (obstacles.any((o) => (o.x - x).abs() < 6 && (o.z - z).abs() < 6)) continue;
-      _tree(x, z);
-    }
-  }
-
-  void _house(double x, double z, int color) {
-    final g = Object3D.group();
-    final walls = mesh('Box', [6, 4, 6], color);
-    walls.position.y = 2;
-    final roof = mesh('Cone', [5.2, 2.8, 4], 0x9c3d2e);
-    roof.position.y = 5.4;
-    roof.rotation.y = math.pi / 4;
-    final door = mesh('Box', [1.2, 2.2, 0.1], 0x6b4226);
-    door.position.set(0, 1.1, 3.05);
-    g.add(walls);
-    g.add(roof);
-    g.add(door);
-    g.position.set(x, 0, z);
-    // Doors face the nearest road (z = 0 axis).
-    g.rotation.y = z < 0 ? 0 : math.pi;
-    scene.add(g);
-    obstacles.add((x: x, z: z, r: 4.6));
-  }
-
-  void _tree(double x, double z) {
-    final g = Object3D.group();
-    final trunk = mesh('Cylinder', [0.35, 0.5, 2, 8], 0x7a5230);
-    trunk.position.y = 1;
-    final top = mesh('Cone', [1.8, 4, 8], 0x2f8f4e);
-    top.position.y = 4;
-    g.add(trunk);
-    g.add(top);
-    g.position.set(x, 0, z);
-    scene.add(g);
-    obstacles.add((x: x, z: z, r: 1.0));
   }
 }

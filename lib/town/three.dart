@@ -93,6 +93,43 @@ Object3D mesh(String geometry, List<num> args, int color, {bool flat = false, bo
   return Object3D._(m);
 }
 
+/// A flat sign showing [text], drawn onto a canvas texture. Faces +z.
+Object3D signboard(String text, double w, double h, {String bg = '#6b4a2b', String fg = '#fff3d6'}) {
+  const px = 128; // canvas pixels per world unit
+  final canvas = web.document.createElement('canvas') as web.HTMLCanvasElement
+    ..width = (w * px).round()
+    ..height = (h * px).round();
+  final ctx = canvas.getContext('2d') as web.CanvasRenderingContext2D;
+  ctx.fillStyle = bg.toJS;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = fg.toJS;
+  ctx.lineWidth = 6;
+  ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+
+  // Shrink the text until it fits inside the frame.
+  var size = canvas.height * 0.5;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = fg.toJS;
+  do {
+    ctx.font = 'bold ${size.round()}px sans-serif';
+    size -= 2;
+  } while (ctx.measureText(text).width > canvas.width * 0.86 && size > 10);
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2 + 4);
+
+  final texture = _new('CanvasTexture', [canvas]);
+  texture.setProperty('colorSpace'.toJS, 'srgb'.toJS);
+  final m = _new('Mesh');
+  m.setProperty('geometry'.toJS, _new('PlaneGeometry', [w, h]));
+  m.setProperty(
+    'material'.toJS,
+    _new('MeshBasicMaterial', [
+      {'map': texture},
+    ]),
+  );
+  return Object3D._(m);
+}
+
 Object3D light(String type, int color, num intensity) => Object3D._(_new(type, [color, intensity]));
 
 Object3D hemisphereLight(int sky, int ground, num intensity) =>
@@ -102,7 +139,7 @@ JSAny color(int hex) => _new('Color', [hex]);
 
 JSAny fog(int hex, num near, num far) => _new('Fog', [hex, near, far]);
 
-/// Raycasting against a single object, used for click-to-walk.
+/// Raycasting against an object and its children, used for click-to-walk.
 class Picker {
   Picker() : _raycaster = _new('Raycaster'), _ndc = _new('Vector2');
 
@@ -114,7 +151,7 @@ class Picker {
     _ndc.setProperty('x'.toJS, nx.toJS);
     _ndc.setProperty('y'.toJS, ny.toJS);
     _raycaster.callMethodVarArgs('setFromCamera'.toJS, [_ndc, camera]);
-    final hits = _raycaster.callMethodVarArgs<JSArray<JSObject>>('intersectObject'.toJS, [target]);
+    final hits = _raycaster.callMethodVarArgs<JSArray<JSObject>>('intersectObject'.toJS, [target, true.toJS]);
     if (hits.length == 0) return null;
     final p = Vec3._(hits[0].getProperty<JSObject>('point'.toJS));
     return (x: p.x, z: p.z);

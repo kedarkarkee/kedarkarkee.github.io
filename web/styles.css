@@ -160,3 +160,337 @@ html, body {
     font-size: 0.85rem;
   }
 }
+
+/* --- Overlay shown inside a house -------------------------------------------- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(28, 16, 10, 0.55);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  animation: ov-fade 0.2s ease-out;
+}
+
+.ov-sheet {
+  display: flex;
+  flex-direction: column;
+  width: min(880px, 100%);
+  max-height: min(90vh, 100%);
+  overflow: hidden;
+  border-radius: 18px;
+  background: #fbf6ec;
+  color: #3b2a1d;
+  font-family: Roboto, sans-serif;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  animation: ov-pop 0.25s ease-out;
+}
+
+@keyframes ov-fade {
+  from { opacity: 0; }
+}
+
+@keyframes ov-pop {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+}
+
+.ov-flags {
+  display: flex;
+  flex: none;
+  height: 10px;
+}
+
+.ov-flag {
+  flex: 1;
+}
+
+.ov-blue { background: #1e88e5; }
+.ov-white { background: #fafafa; }
+.ov-red { background: #e53935; }
+.ov-green { background: #43a047; }
+.ov-yellow { background: #fdd835; }
+
+.ov-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.4rem;
+  background: linear-gradient(135deg, #9c2f2f, #7a2222);
+  color: #fff3d6;
+}
+
+.ov-title {
+  margin: 0;
+  font-size: 1.6rem;
+  letter-spacing: 0.02em;
+}
+
+.ov-close {
+  width: 2.4rem;
+  height: 2.4rem;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 243, 214, 0.18);
+  color: #fff3d6;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ov-close:hover {
+  background: rgba(255, 243, 214, 0.32);
+}
+
+.ov-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.4rem;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ov-hint {
+  flex: none;
+  padding: 0.5rem;
+  background: #f1e7d3;
+  color: #7a6650;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.ov-lead {
+  margin: 0 0 1rem;
+  font-size: 1.2rem;
+  line-height: 1.5;
+}
+
+.ov-text {
+  margin: 0 0 0.9rem;
+  line-height: 1.6;
+}
+
+.ov-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.75rem;
+  margin: 1.2rem 0 0;
+}
+
+.ov-fact {
+  padding: 0.8rem 1rem;
+  border-radius: 12px;
+  background: #f1e7d3;
+}
+
+.ov-fact-label {
+  color: #8a6f52;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ov-fact-value {
+  margin: 0.2rem 0 0;
+  font-weight: 700;
+}
+
+.ov-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.ov-card {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 1.1rem;
+  border-left: 6px solid #1e88e5;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(60, 40, 20, 0.12);
+}
+
+.ov-tone-2 { border-left-color: #e53935; }
+.ov-tone-3 { border-left-color: #43a047; }
+.ov-tone-4 { border-left-color: #f9a825; }
+
+.ov-card-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+}
+
+.ov-badge {
+  color: #8a6f52;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ov-year {
+  color: #a08a70;
+}
+
+.ov-card-title {
+  margin: 0.4rem 0;
+  font-size: 1.2rem;
+}
+
+.ov-card-text {
+  flex: 1;
+  margin: 0 0 0.7rem;
+  line-height: 1.5;
+}
+
+.ov-card-link {
+  align-self: flex-start;
+  margin-top: 0.8rem;
+  color: #9c2f2f;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.ov-card-link:hover {
+  text-decoration: underline;
+}
+
+.ov-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.ov-chip {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: #f1e7d3;
+  font-size: 0.8rem;
+}
+
+.ov-chip-big {
+  padding: 0.4rem 0.9rem;
+  font-size: 0.95rem;
+}
+
+.ov-timeline {
+  position: relative;
+  padding-left: 1.6rem;
+  border-left: 3px solid #e0cfae;
+}
+
+.ov-item {
+  position: relative;
+  margin-bottom: 1.4rem;
+}
+
+.ov-item::before {
+  content: '';
+  position: absolute;
+  left: calc(-1.6rem - 9px);
+  top: 0.25rem;
+  width: 15px;
+  height: 15px;
+  border: 3px solid #fbf6ec;
+  border-radius: 50%;
+  background: #9c2f2f;
+}
+
+.ov-item-years {
+  color: #8a6f52;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ov-item-title {
+  margin: 0.15rem 0;
+  font-size: 1.2rem;
+}
+
+.ov-item-place {
+  margin-bottom: 0.4rem;
+  color: #9c2f2f;
+  font-weight: 700;
+}
+
+.ov-skill {
+  margin-bottom: 1.3rem;
+}
+
+.ov-skill-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+}
+
+.ov-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.2rem;
+}
+
+.ov-button {
+  display: inline-block;
+  padding: 0.7rem 1.2rem;
+  border: 2px solid #9c2f2f;
+  border-radius: 999px;
+  color: #9c2f2f;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.ov-button:hover {
+  background: #f6e3e0;
+}
+
+.ov-button-primary {
+  background: #9c2f2f;
+  color: #fff3d6;
+}
+
+.ov-button-primary:hover {
+  background: #7a2222;
+}
+
+@media (max-width: 600px) {
+  .overlay {
+    padding: 0;
+  }
+
+  .ov-sheet {
+    max-height: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+
+  .ov-title {
+    font-size: 1.3rem;
+  }
+
+  .ov-body {
+    padding: 1rem;
+  }
+}
+
+.overlay-open .town-hint {
+  display: none !important;
+}
+
+.ov-hint-touch {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .ov-hint-keys {
+    display: none;
+  }
+
+  .ov-hint-touch {
+    display: inline;
+  }
+}

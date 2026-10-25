@@ -12,7 +12,12 @@ import 'three.dart';
 class Stickman {
   Stickman() {
     _build();
+    root.scale.set(scale, scale, scale);
+    face.scale.set(scale, scale, scale);
   }
+
+  /// Size relative to the modelled units, so he fits through the village doors.
+  static const scale = 0.65;
 
   /// Moves and turns with the character. Add to the scene.
   final root = Object3D.group();
@@ -116,11 +121,11 @@ class Stickman {
   void updateFace(Camera camera) {
     final p = root.position;
     final lean = _torso.rotation.x;
-    final fwd = _rig.position.z + _headY * math.sin(lean);
+    final fwd = (_rig.position.z + _headY * math.sin(lean)) * scale;
     final h = root.rotation.y;
     face.position.set(
       p.x + fwd * math.sin(h),
-      p.y + _rig.position.y + _hipY + _headY * math.cos(lean) + _bob,
+      p.y + (_rig.position.y + _hipY + _headY * math.cos(lean) + _bob) * scale,
       p.z + fwd * math.cos(h),
     );
     face.quaternion.copy(camera.quaternion);
