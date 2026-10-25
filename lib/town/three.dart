@@ -45,6 +45,7 @@ extension type Object3D._(JSObject _) implements JSObject {
   external Quat quaternion;
   external bool visible;
   external void add(Object3D child);
+  external void lookAt(num x, num y, num z);
 }
 
 extension type Camera._(JSObject _) implements Object3D {
@@ -52,7 +53,6 @@ extension type Camera._(JSObject _) implements Object3D {
       Camera._(_new('PerspectiveCamera', [fov, aspect, near, far]));
 
   external double aspect;
-  external void lookAt(num x, num y, num z);
   external void updateProjectionMatrix();
 }
 
@@ -78,14 +78,14 @@ extension type Renderer._(JSObject _) implements JSObject {
 
 /// Builds a mesh from a `<geometry>Geometry` class name. [basic] gives an
 /// unlit, flat-coloured material (used for the stickman).
-Object3D mesh(String geometry, List<num> args, int color, {bool flat = false, bool basic = false}) {
+Object3D mesh(String geometry, List<num> args, int color, {bool flat = false, bool basic = false, bool fog = true}) {
   final m = _new('Mesh');
   m.setProperty('geometry'.toJS, _new('${geometry}Geometry', args));
   m.setProperty(
     'material'.toJS,
     basic
         ? _new('MeshBasicMaterial', [
-            {'color': color},
+            {'color': color, 'fog': fog},
           ])
         : _new('MeshLambertMaterial', [
             {'color': color, 'flatShading': flat},
@@ -131,6 +131,20 @@ Object3D signboard(String text, double w, double h, {String bg = '#6b4a2b', Stri
   return Object3D._(m);
 }
 
+/// A flat, unlit, optionally see-through disc that ignores fog. Used for the
+/// sun, moon, stars and their glow; [Object3D.lookAt] turns it to face a point.
+Object3D softDisc(double radius, int color, {double opacity = 1}) {
+  final m = _new('Mesh');
+  m.setProperty('geometry'.toJS, _new('CircleGeometry', [radius, 32]));
+  m.setProperty(
+    'material'.toJS,
+    _new('MeshBasicMaterial', [
+      {'color': color, 'fog': false, 'transparent': opacity < 1, 'opacity': opacity, 'depthWrite': false},
+    ]),
+  );
+  return Object3D._(m);
+}
+
 /// A soft dark disc used as a ground shadow so jumps and flight read as height.
 Object3D blobShadow(double radius) {
   final m = _new('Mesh');
@@ -146,10 +160,25 @@ Object3D blobShadow(double radius) {
   return o;
 }
 
-Object3D light(String type, int color, num intensity) => Object3D._(_new(type, [color, intensity]));
+extension type Light._(JSObject _) implements Object3D {
+  external double intensity;
+}
 
-Object3D hemisphereLight(int sky, int ground, num intensity) =>
-    Object3D._(_new('HemisphereLight', [sky, ground, intensity]));
+Light light(String type, int color, num intensity) => Light._(_new(type, [color, intensity]));
+
+Light hemisphereLight(int sky, int ground, num intensity) => Light._(_new('HemisphereLight', [sky, ground, intensity]));
+
+/// Changes a light's colour (and a hemisphere light's ground colour if given).
+void setLight(Light l, {int? color, int? ground, num? intensity}) {
+  if (color != null) l.getProperty<JSObject>('color'.toJS).callMethod<JSAny?>('setHex'.toJS, color.toJS);
+  if (ground != null) l.getProperty<JSObject>('groundColor'.toJS).callMethod<JSAny?>('setHex'.toJS, ground.toJS);
+  if (intensity != null) l.intensity = intensity.toDouble();
+}
+
+/// Recolours a mesh's material in place (used for the day/night switch).
+void setMeshColor(Object3D o, int hex) {
+  o.getProperty<JSObject>('material'.toJS).getProperty<JSObject>('color'.toJS).callMethod<JSAny?>('setHex'.toJS, hex.toJS);
+}
 
 JSAny color(int hex) => _new('Color', [hex]);
 
@@ -161,6 +190,16 @@ class Picker {
 
   final JSObject _raycaster;
   final JSObject _ndc;
+
+  /// Distance from [origin] along the unit vector [dir] to the first thing hit
+  /// on [target] within [maxDistance], or null. Used to keep the camera out of houses.
+  double? castDistance(Vec3 origin, Vec3 dir, Object3D target, double maxDistance) {
+    _raycaster.callMethodVarArgs('set'.toJS, [origin, dir]);
+    _raycaster.setProperty('far'.toJS, maxDistance.toJS);
+    final hits = _raycaster.callMethodVarArgs<JSArray<JSObject>>('intersectObject'.toJS, [target, true.toJS]);
+    if (hits.length == 0) return null;
+    return hits[0].getProperty<JSNumber>('distance'.toJS).toDartDouble;
+  }
 
   /// Returns the (x, z) ground point under the NDC coordinate, or null.
   ({double x, double z})? pick(Camera camera, Object3D target, double nx, double ny) {

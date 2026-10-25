@@ -23,6 +23,7 @@ class Village {
     _flags();
     _trees();
     _mountains();
+    root.add(occluders);
   }
 
   final root = Object3D.group();
@@ -30,7 +31,23 @@ class Village {
   /// The tops of the terraces; click-to-walk raycasts against these.
   final walkable = Object3D.group();
 
+  /// All the houses, which the camera must not end up inside.
+  final occluders = Object3D.group();
+
   final entrances = <Entrance>[];
+
+  /// Window panes, which glow warm at night.
+  final _glass = <Object3D>[];
+
+  static const _glassDay = 0x26323c, _glassNight = 0xffcf6b;
+
+  /// Switches the village between its day and night look (only the windows
+  /// need changing; everything else reacts to the scene lighting).
+  void setNight(bool night) {
+    for (final g in _glass) {
+      setMeshColor(g, night ? _glassNight : _glassDay);
+    }
+  }
   final _rng = math.Random(11);
 
   static const _stone = [0x8d877b, 0x9b9484, 0x7f796d, 0xa39c8b];
@@ -193,7 +210,7 @@ class Village {
     final base = heightAt(cx, cz);
     final g = Object3D.group();
     g.position.set(cx, base, cz);
-    root.add(g);
+    occluders.add(g);
 
     const wood = 0x7a4b2a, blue = 0x2f6fb5, dark = 0x26323c;
     final lowerWall = [0xc9c3b5, 0xd8d2c4, 0xb85c3f][_rng.nextInt(3)];
@@ -216,7 +233,9 @@ class Village {
     // Windows with blue frames.
     void window(double x, double y) {
       _box(g, 1.15, 1.15, 0.1, blue, x, y, d / 2 + 0.01);
-      _box(g, 0.9, 0.9, 0.12, dark, x, y, d / 2 + 0.05);
+      final pane = mesh('Box', [0.9, 0.9, 0.12], dark, basic: true);
+      _put(g, pane, x, y, d / 2 + 0.05);
+      _glass.add(pane);
     }
 
     final xs = w >= 9 ? [-w * 0.32, w * 0.32] : [-w * 0.28, w * 0.28];
@@ -382,26 +401,39 @@ class Village {
   // --- mountains ----------------------------------------------------------------------
 
   void _mountains() {
-    void peak(double x, double z, double r, double h, int color) {
+    void peak(double x, double z, double r, double h, int color, {bool snow = false}) {
       final m = mesh('Cone', [r, h, 7], color, flat: true);
       m.position.set(x, h / 2 - 3, z);
       m.rotation.y = _rng.nextDouble() * 3;
       root.add(m);
+      if (snow) {
+        // A white cap: the top third of a similar cone.
+        const k = 0.34;
+        // Slightly wider than the slope below it so the two surfaces don't z-fight.
+        final cap = mesh('Cone', [r * k * 1.07, h * k * 1.03, 7], 0xf4f7fb, flat: true);
+        cap.position.set(x, h * (1 - k / 2) - 3, z);
+        cap.rotation.y = m.rotation.y;
+        root.add(cap);
+      }
     }
 
-    // Hazy blue range behind the village, snow-free like the photo.
+    // Distant hills with a few snow-capped peaks, low enough to sit above the
+    // roofs on screen. They fade into the sky haze.
     for (var i = 0; i < 12; i++) {
-      peak(-150 + i * 28.0 + _rng.nextDouble() * 12, -150 - _rng.nextDouble() * 50, 48 + _rng.nextDouble() * 20,
-          70 + _rng.nextDouble() * 50, i.isEven ? 0x5f8fb8 : 0x6a98bd);
+      peak(-150 + i * 28.0 + _rng.nextDouble() * 12, -135 - _rng.nextDouble() * 35, 44 + _rng.nextDouble() * 16,
+          42 + _rng.nextDouble() * 26, i.isEven ? 0x5f8fb8 : 0x6a98bd, snow: i % 3 == 1);
+    }
+    for (final (x, h) in [(-70.0, 92.0), (-5.0, 104.0), (60.0, 88.0), (130.0, 96.0), (-135.0, 90.0)]) {
+      peak(x, -205 - _rng.nextDouble() * 20, 62, h, 0x6f9bc0, snow: true);
     }
     // Greener hills flanking the terraces.
     for (var i = 0; i < 7; i++) {
       for (final side in [-1.0, 1.0]) {
         peak(side * (80 + _rng.nextDouble() * 25), -110 + i * 20.0, 28 + _rng.nextDouble() * 12,
-            34 + _rng.nextDouble() * 22, [0x4c7d53, 0x588a4c, 0x477a58][_rng.nextInt(3)]);
+            30 + _rng.nextDouble() * 20, [0x4c7d53, 0x588a4c, 0x477a58][_rng.nextInt(3)]);
       }
     }
-    peak(-62, -75, 30, 44, 0x4f8553);
-    peak(66, -80, 32, 48, 0x4c7d53);
+    peak(-62, -75, 30, 40, 0x4f8553);
+    peak(66, -80, 32, 44, 0x4c7d53);
   }
 }

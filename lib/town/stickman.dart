@@ -46,7 +46,22 @@ class Stickman {
   double _phase = 0;
   double _lastT = 0;
 
-  Object3D _ink3(String geometry, List<num> args) => mesh(geometry, args, _ink, basic: true);
+  /// Every black line of the body (not the face), so night mode can lighten them.
+  final _inkParts = <Object3D>[];
+  List<Object3D> _limbs = const [];
+
+  Object3D _ink3(String geometry, List<num> args) {
+    final m = mesh(geometry, args, _ink, basic: true);
+    _inkParts.add(m);
+    return m;
+  }
+
+  /// At night the black body would vanish into the dark, so draw it light.
+  void setNight(bool night) {
+    for (final m in _limbs) {
+      setMeshColor(m, night ? 0xf2f2f2 : _ink);
+    }
+  }
 
   T _at<T extends Object3D>(T o, Object3D parent, double x, double y, double z) {
     o.position.set(x, y, z);
@@ -90,6 +105,7 @@ class Stickman {
     _at(mesh('Box', [0.9, 1.7, 0.03], 0xe53935, basic: true), _cape, 0, -0.85, 0);
     _cape.visible = false;
 
+    _limbs = List.of(_inkParts);
     _buildFace();
   }
 

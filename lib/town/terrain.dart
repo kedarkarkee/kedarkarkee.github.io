@@ -50,16 +50,21 @@ double _smoothstep(double a, double b, double x) {
   return t * t * (3 - 2 * t);
 }
 
+/// Height of [s]'s steps at depth z (assumes z is within the flight).
+double _stairHeight(Stair s, double z) {
+  // 0 at the bottom of the flight, 1 at the wall.
+  final f = (1 - (z - s.wallZ) / Stair.depth) * Stair.steps;
+  final step = f.floor();
+  // Quantised to treads, with a short ramp so walking up is smooth.
+  final h = (step + _smoothstep(0.6, 1.0, f - step)) / Stair.steps;
+  return s.lower + h.clamp(0.0, 1.0) * s.rise;
+}
+
 /// Height of the ground at (x, z), including the steps.
 double heightAt(double x, double z) {
   for (final s in stairs) {
     if ((x - s.x).abs() <= Stair.halfWidth && z >= s.wallZ && z <= s.wallZ + Stair.depth) {
-      // 0 at the bottom of the flight, 1 at the wall.
-      final f = (1 - (z - s.wallZ) / Stair.depth) * Stair.steps;
-      final step = f.floor();
-      // Quantised to treads, with a short ramp so walking up is smooth.
-      final h = (step + _smoothstep(0.6, 1.0, f - step)) / Stair.steps;
-      return s.lower + h.clamp(0.0, 1.0) * s.rise;
+      return _stairHeight(s, z);
     }
   }
   for (final t in terraces) {
@@ -90,32 +95,43 @@ bool _inBlock(double x, double z) {
 /// Whether (x, z) is inside the village limits (used when flying over everything).
 bool inWorld(double x, double z) => x.abs() <= worldX && z >= worldNorth && z <= worldSouth;
 
-/// Whether (x, z) can't be stood on: outside the village, inside a house, in a
-/// retaining wall (except at a staircase) or against a staircase's side rails.
-bool isBlocked(double x, double z) {
+/// How far below a wall's top his feet may be and still hop onto it.
+const _stepUp = 0.15;
+
+/// Whether (x, z) can't be stood on by someone whose feet are at height [y].
+///
+/// Houses, trees and the village limits always block. Low things (the stone
+/// retaining walls and the rails beside the stairs) only block if his feet are
+/// below their top, so a jump can clear them. The default [y] is "on the
+/// ground", which treats every wall as solid.
+bool isBlocked(double x, double z, [double y = -1e9]) {
   if (!inWorld(x, z)) return true;
 
   for (final s in stairs) {
     final dx = (x - s.x).abs();
-    // Retaining wall, with a gap where the stairs arrive.
-    if ((z - s.wallZ).abs() < 0.35 && dx > Stair.halfWidth) return true;
-    // Side rails along the flight.
-    if (z >= s.wallZ && z <= s.wallZ + Stair.depth && dx > Stair.halfWidth && dx < Stair.halfWidth + 0.45) {
+    // Retaining wall, with a gap where the stairs arrive. Its top is the upper terrace.
+    if ((z - s.wallZ).abs() < 0.35 && dx > Stair.halfWidth && y < s.upper - _stepUp) return true;
+    // Side rails along the flight, as high as the steps beside them plus a bit.
+    if (z >= s.wallZ &&
+        z <= s.wallZ + Stair.depth &&
+        dx > Stair.halfWidth &&
+        dx < Stair.halfWidth + 0.45 &&
+        y < _stairHeight(s, z) + 0.9) {
       return true;
     }
   }
   return _inBlock(x, z);
 }
 
-/// Moves from (x, z) by (dx, dz), sliding along anything in the way. Steps are
-/// kept short so a fast rider can't skip through a thin wall.
-({double x, double z}) moveWithin(double x, double z, double dx, double dz) {
+/// Moves from (x, z) by (dx, dz) at feet height [y], sliding along anything in
+/// the way. Steps are kept short so a fast rider can't skip through a thin wall.
+({double x, double z}) moveWithin(double x, double z, double dx, double dz, {double y = -1e9}) {
   final dist = math.sqrt(dx * dx + dz * dz);
   final n = math.max(1, (dist / 0.2).ceil());
   final sx = dx / n, sz = dz / n;
   for (var i = 0; i < n; i++) {
-    if (!isBlocked(x + sx, z)) x += sx;
-    if (!isBlocked(x, z + sz)) z += sz;
+    if (!isBlocked(x + sx, z, y)) x += sx;
+    if (!isBlocked(x, z + sz, y)) z += sz;
   }
   return (x: x, z: z);
 }

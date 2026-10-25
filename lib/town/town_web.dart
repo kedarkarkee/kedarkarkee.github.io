@@ -4,7 +4,9 @@ import 'dart:math' as math;
 import 'package:web/web.dart' as web;
 
 import 'bicycle.dart';
+import 'minimap.dart';
 import 'overlay.dart';
+import 'sky.dart';
 import 'stickman.dart';
 import 'terrain.dart';
 import 'three.dart';
@@ -20,8 +22,15 @@ const _mountDistance = 3.5;
 
 // Jumping and flying. Heights are in world units above the ground.
 const _gravity = 24.0;
-const _jumpSpeed = 9.0;
+const _jumpSpeed = 10.0; // peaks at ~2.1 units, enough to hop a 1.5-high wall
 const _cruiseHeight = 10.5;
+
+// Three-quarter camera: swung round from due south, a little above him,
+// looking slightly up the hill so the sky and mountains show.
+const _camAzimuth = 0.61; // 35 degrees
+const _camDistance = 14.0;
+const _camHeight = 6.5;
+const _camLookUp = 3.2;
 const _flySpeed = 13.0;
 const _flySprintSpeed = 24.0;
 
@@ -48,8 +57,10 @@ class _Town {
   final web.HTMLElement container;
   final scene = Scene();
   final renderer = Renderer();
-  final camera = Camera.perspective(50, 1, 0.1, 600);
+  final camera = Camera.perspective(60, 1, 0.1, 700);
   final picker = Picker();
+  final _cameraProbe = Picker(); // separate ray so click-picking keeps its own settings
+  final _head = vec3(0, 0, 0), _toCamera = vec3(0, 0, 0);
   final keys = <String>{};
   late final Village village;
   late final Overlay overlay;
@@ -65,6 +76,13 @@ class _Town {
   late final Object3D shadow;
   late final web.HTMLElement enterPrompt;
 
+  // Day / night.
+  late final Sky sky;
+  late final Minimap minimap;
+  late final Light _hemi, _sun;
+  late final web.HTMLElement _themeButton;
+  bool night = false;
+
   // Touch controls.
   late final web.HTMLElement _joyKnob, _joyPad, _rideButton, _enterButton, _honkButton, _flyButton, honkLabel;
   int? _joyPointer;
@@ -78,20 +96,22 @@ class _Town {
   double lastTime = 0;
 
   void start() {
-    // Hazy mountain-air blue, with distant hills fading into it.
-    scene.background = color(0xb7d9f0);
-    scene.fog = fog(0xb7d9f0, 90, 320);
-    scene.add(hemisphereLight(0xffffff, 0x7d9a5f, 1.7));
-    final sun = light('DirectionalLight', 0xfff0d0, 2.3);
-    sun.position.set(-30, 50, 40);
-    scene.add(sun);
+    _hemi = hemisphereLight(0xffffff, 0x7d9a5f, 1.7);
+    _sun = light('DirectionalLight', 0xfff0d0, 2.3);
+    _sun.position.set(-30, 50, 40);
+    scene.add(_hemi);
+    scene.add(_sun);
+    sky = Sky();
+    scene.add(sky.root);
 
     village = Village();
     scene.add(village.root);
     overlay = Overlay(container)..onClose = () => keys.clear();
+    minimap = Minimap(container, village.entrances, cameraAzimuth: _camAzimuth);
 
     stickman = Stickman();
     stickman.root.position.set(0, 0, 14);
+    camera.position.set(math.sin(_camAzimuth) * _camDistance, _camHeight, 14 + math.cos(_camAzimuth) * _camDistance);
     scene.add(stickman.root);
     scene.add(stickman.face);
 
@@ -117,6 +137,8 @@ class _Town {
     honkLabel.textContent = 'Honk!';
     container.append(honkLabel);
     _buildControls();
+    _buildThemeButton();
+    _applyTheme(_initialNight());
 
     renderer.setPixelRatio(math.min(web.window.devicePixelRatio, 2));
     container.append(renderer.domElement);
@@ -333,6 +355,51 @@ class _Town {
     el.style.top = '${(-_anchor.y * 0.5 + 0.5) * h}px';
   }
 
+  // --- Day / night -------------------------------------------------------------
+
+  bool _initialNight() {
+    final saved = web.window.localStorage.getItem('theme');
+    if (saved != null) return saved == 'dark';
+    return web.window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+
+  void _buildThemeButton() {
+    _themeButton = web.document.createElement('button') as web.HTMLElement..className = 'theme-toggle';
+    _themeButton.addEventListener(
+      'click',
+      ((web.Event e) {
+        _applyTheme(!night);
+        web.window.localStorage.setItem('theme', night ? 'dark' : 'light');
+      }).toJS,
+    );
+    container.append(_themeButton);
+  }
+
+  /// Switches the whole scene (and page) between day and night.
+  void _applyTheme(bool dark) {
+    night = dark;
+    final sky = dark ? 0x0a1226 : 0x8ec9f2;
+    scene.background = color(sky);
+    scene.fog = fog(sky, dark ? 70 : 90, dark ? 260 : 320);
+    if (dark) {
+      setLight(_hemi, color: 0x8fa2e0, ground: 0x1c2638, intensity: 1.15);
+      setLight(_sun, color: 0xb8c6ff, intensity: 1.25);
+      _sun.position.set(-30, 45, 30);
+    } else {
+      setLight(_hemi, color: 0xffffff, ground: 0x7d9a5f, intensity: 1.7);
+      setLight(_sun, color: 0xfff0d0, intensity: 2.3);
+      _sun.position.set(-30, 50, 40);
+    }
+    this.sky.setNight(dark);
+    village.setNight(dark);
+    stickman.setNight(dark);
+    minimap.setNight(dark);
+    web.document.body?.classList.toggle('dark', dark);
+    _themeButton.textContent = dark ? '\u2600' : '\u263E'; // sun / moon: what you'd switch to
+    _themeButton.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+    _themeButton.setAttribute('title', dark ? 'Light mode' : 'Dark mode');
+  }
+
   // --- Touch controls -------------------------------------------------
 
   web.HTMLElement _el(String className, [String? text]) {
@@ -475,6 +542,15 @@ class _Town {
       targetX = targetZ = null;
     }
 
+    // Controls are relative to the camera: up on screen is "forward".
+    if (dx != 0 || dz != 0) {
+      final fx = -math.sin(_camAzimuth), fz = -math.cos(_camAzimuth); // forward
+      final rx = math.cos(_camAzimuth), rz = -math.sin(_camAzimuth); // right
+      final wx = rx * dx + fx * -dz, wz = rz * dx + fz * -dz;
+      dx = wx;
+      dz = wz;
+    }
+
     final pos = stickman.root.position;
     if (dx == 0 && dz == 0 && targetX != null) {
       final tx = targetX! - pos.x, tz = targetZ! - pos.z;
@@ -504,7 +580,7 @@ class _Town {
               x: inWorld(pos.x + dx * speed * dt, pos.z) ? pos.x + dx * speed * dt : pos.x,
               z: inWorld(pos.x, pos.z + dz * speed * dt) ? pos.z + dz * speed * dt : pos.z,
             )
-          : moveWithin(pos.x, pos.z, dx * speed * dt, dz * speed * dt);
+          : moveWithin(pos.x, pos.z, dx * speed * dt, dz * speed * dt, y: pos.y);
       final moved = math.sqrt((next.x - pos.x) * (next.x - pos.x) + (next.z - pos.z) * (next.z - pos.z));
       pos.x = next.x;
       pos.z = next.z;
@@ -524,21 +600,26 @@ class _Town {
       stickman.root.rotation.y = heading;
     }
 
-    // Vertical motion: jump arc, or a smooth climb to cruising height in flight.
+    // Vertical motion in world height: a jump arc, a drop off a ledge, or a
+    // smooth climb to cruising height in flight.
     final ground = heightAt(pos.x, pos.z);
-    final wasAirborne = altitude > 0;
+    final wasAirborne = altitude > 0.05;
+    var y = pos.y;
     if (flying) {
-      altitude += (_cruiseHeight - altitude) * math.min(1, dt * 2.5);
+      y += (ground + _cruiseHeight - y) * math.min(1, dt * 2.5);
     } else {
-      vy = math.max(vy - _gravity * dt, -12.0);
-      altitude += vy * dt;
-      if (altitude <= 0) {
-        altitude = 0;
+      vy = math.max(vy - _gravity * dt, -14.0);
+      y += vy * dt;
+      final gap = y - ground;
+      // Landed, or just stepped down a stair (those shouldn't count as a fall).
+      if (gap <= 0 || (gap < 0.45 && vy <= 0)) {
+        y = ground;
         vy = 0;
-        if (wasAirborne) _unstick(); // came down on a house or wall
+        if (wasAirborne) _unstick(); // came down on a house or tree
       }
     }
-    pos.y = ground + altitude;
+    altitude = math.max(0, y - ground);
+    pos.y = y;
     if (riding) {
       bike.root.position.set(pos.x, pos.y, pos.z);
       bike.root.rotation.y = heading;
@@ -562,15 +643,43 @@ class _Town {
 
     // Chase camera.
     final k = math.min(1, dt * (sprinting && moving ? 6 : 4));
-    camera.position.x += (pos.x - camera.position.x) * k;
     // Pull the camera back on tall (portrait) screens so the scene still fits.
     final zoom = camera.aspect < 1 ? 1 + (1 - camera.aspect) * 0.9 : 1.0;
     // In flight the camera only follows part of the way up, so the ground stays in view.
     final focus = pos.y - altitude * 0.5;
-    camera.position.y += (focus + 8.5 * zoom - camera.position.y) * k;
-    camera.position.z += (pos.z + 11 * zoom - camera.position.z) * k;
-    camera.lookAt(pos.x, focus + 1.8, pos.z);
+    final lookY = focus + _camLookUp;
+    var wantX = pos.x + math.sin(_camAzimuth) * _camDistance * zoom;
+    var wantY = focus + _camHeight * zoom;
+    var wantZ = pos.z + math.cos(_camAzimuth) * _camDistance * zoom;
+
+    // If a house is between him and the camera, move the camera in front of it.
+    var follow = k;
+    final cx = wantX - pos.x, cy = wantY - lookY, cz = wantZ - pos.z;
+    final len = math.sqrt(cx * cx + cy * cy + cz * cz);
+    _head.set(pos.x, lookY, pos.z);
+    _toCamera.set(cx / len, cy / len, cz / len);
+    final hit = _cameraProbe.castDistance(_head, _toCamera, village.occluders, len);
+    if (hit != null) {
+      final d = math.max(hit - 0.8, 3.0);
+      wantX = pos.x + cx / len * d;
+      wantY = lookY + cy / len * d;
+      wantZ = pos.z + cz / len * d;
+      follow = math.min(1, dt * 10); // react quickly so we don't see the inside of the wall
+    }
+    camera.position.x += (wantX - camera.position.x) * follow;
+    camera.position.y += (wantY - camera.position.y) * follow;
+    camera.position.z += (wantZ - camera.position.z) * follow;
+    camera.lookAt(pos.x, lookY, pos.z);
+    sky.update(camera.position, t);
     stickman.updateFace(camera);
+    minimap.update(
+      t,
+      pos.x,
+      pos.z,
+      heading,
+      bike: (x: bike.root.position.x, z: bike.root.position.z),
+      riding: riding,
+    );
     _updatePrompt();
     _updateButtons();
   }
