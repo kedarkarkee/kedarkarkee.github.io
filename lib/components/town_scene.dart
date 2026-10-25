@@ -26,7 +26,7 @@ class TownSceneState extends State<TownScene> {
   Component build(BuildContext context) {
     return div(classes: 'town-root', [
       div(id: _id, classes: 'town', []),
-      p(classes: 'town-hint', [.text('Move with WASD / arrow keys, or click the ground.')]),
+      p(classes: 'town-hint', [.text('Move with WASD / arrow keys (hold Shift to sprint), or click the ground.')]),
     ]);
   }
 }

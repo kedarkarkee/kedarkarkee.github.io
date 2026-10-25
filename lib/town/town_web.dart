@@ -3,14 +3,15 @@ import 'dart:math' as math;
 
 import 'package:web/web.dart' as web;
 
-import 'dora.dart';
+import 'stickman.dart';
 import 'three.dart';
 
 /// A house/tree footprint the character cannot walk through.
 typedef Obstacle = ({double x, double z, double r});
 
 const _bound = 38.0;
-const _speed = 6.0;
+const _walkSpeed = 5.5;
+const _sprintSpeed = 11.0;
 
 Future<void> startTown(String containerId) async {
   final container = await _waitFor(containerId);
@@ -37,10 +38,11 @@ class _Town {
   final keys = <String>{};
   final obstacles = <Obstacle>[];
   late final Object3D ground;
-  late final Dora dora;
+  late final Stickman stickman;
 
   double? targetX, targetZ;
   double heading = 0;
+  bool sprint = false; // Shift is held
   double lastTime = 0;
 
   void start() {
@@ -52,9 +54,10 @@ class _Town {
     scene.add(sun);
 
     _buildTown();
-    dora = Dora();
-    dora.root.position.set(0, 0, 8);
-    scene.add(dora.root);
+    stickman = Stickman();
+    stickman.root.position.set(0, 0, 8);
+    scene.add(stickman.root);
+    scene.add(stickman.face);
 
     renderer.setPixelRatio(math.min(web.window.devicePixelRatio, 2));
     container.append(renderer.domElement);
@@ -64,6 +67,7 @@ class _Town {
     web.window.addEventListener(
       'keydown',
       ((web.KeyboardEvent e) {
+        sprint = e.shiftKey;
         final k = e.key.toLowerCase();
         if (_moveKeys.contains(k)) {
           keys.add(k);
@@ -72,7 +76,20 @@ class _Town {
         }
       }).toJS,
     );
-    web.window.addEventListener('keyup', ((web.KeyboardEvent e) => keys.remove(e.key.toLowerCase())).toJS);
+    web.window.addEventListener(
+      'keyup',
+      ((web.KeyboardEvent e) {
+        sprint = e.shiftKey;
+        keys.remove(e.key.toLowerCase());
+      }).toJS,
+    );
+    web.window.addEventListener(
+      'blur',
+      ((web.Event _) {
+        keys.clear();
+        sprint = false;
+      }).toJS,
+    );
     renderer.domElement.addEventListener('pointerdown', ((web.PointerEvent e) => _click(e)).toJS);
 
     web.window.requestAnimationFrame(_frame.toJS);
@@ -115,7 +132,7 @@ class _Town {
     if (keys.contains('w') || keys.contains('arrowup')) dz -= 1;
     if (keys.contains('s') || keys.contains('arrowdown')) dz += 1;
 
-    final pos = dora.root.position;
+    final pos = stickman.root.position;
     if (dx == 0 && dz == 0 && targetX != null) {
       final tx = targetX! - pos.x, tz = targetZ! - pos.z;
       final dist = math.sqrt(tx * tx + tz * tz);
@@ -132,8 +149,9 @@ class _Town {
       final len = math.sqrt(dx * dx + dz * dz);
       dx /= len;
       dz /= len;
-      var nx = (pos.x + dx * _speed * dt).clamp(-_bound, _bound);
-      var nz = (pos.z + dz * _speed * dt).clamp(-_bound, _bound);
+      final speed = sprint ? _sprintSpeed : _walkSpeed;
+      var nx = (pos.x + dx * speed * dt).clamp(-_bound, _bound);
+      var nz = (pos.z + dz * speed * dt).clamp(-_bound, _bound);
       for (final o in obstacles) {
         final ox = nx - o.x, oz = nz - o.z;
         final d = math.sqrt(ox * ox + oz * oz);
@@ -154,16 +172,17 @@ class _Town {
         diff += 2 * math.pi;
       }
       heading += diff * math.min(1, dt * 12);
-      dora.root.rotation.y = heading;
+      stickman.root.rotation.y = heading;
     }
-    dora.animate(t, moving);
+    stickman.animate(t, moving, sprint: sprint);
 
     // Chase camera.
-    final k = math.min(1, dt * 4);
+    final k = math.min(1, dt * (sprint && moving ? 6 : 4));
     camera.position.x += (pos.x - camera.position.x) * k;
-    camera.position.y += (11 - camera.position.y) * k;
-    camera.position.z += (pos.z + 14 - camera.position.z) * k;
-    camera.lookAt(pos.x, 1.5, pos.z);
+    camera.position.y += (8.5 - camera.position.y) * k;
+    camera.position.z += (pos.z + 11 - camera.position.z) * k;
+    camera.lookAt(pos.x, 1.8, pos.z);
+    stickman.updateFace(camera);
   }
 
   // --- Town -----------------------------------------------------------

@@ -25,6 +25,10 @@ extension type Vec3._(JSObject _) implements JSObject {
   external Vec3 lerp(Vec3 v, num t);
 }
 
+extension type Quat._(JSObject _) implements JSObject {
+  external Quat copy(Quat q);
+}
+
 extension type Euler._(JSObject _) implements JSObject {
   external double x, y, z;
 }
@@ -35,6 +39,7 @@ extension type Object3D._(JSObject _) implements JSObject {
   external Vec3 position;
   external Vec3 scale;
   external Euler rotation;
+  external Quat quaternion;
   external void add(Object3D child);
 }
 
@@ -67,14 +72,20 @@ extension type Renderer._(JSObject _) implements JSObject {
   external void dispose();
 }
 
-Object3D mesh(String geometry, List<num> args, int color, {bool flat = false}) {
+/// Builds a mesh from a `<geometry>Geometry` class name. [basic] gives an
+/// unlit, flat-coloured material (used for the stickman).
+Object3D mesh(String geometry, List<num> args, int color, {bool flat = false, bool basic = false}) {
   final m = _new('Mesh');
   m.setProperty('geometry'.toJS, _new('${geometry}Geometry', args));
   m.setProperty(
     'material'.toJS,
-    _new('MeshLambertMaterial', [
-      {'color': color, 'flatShading': flat},
-    ]),
+    basic
+        ? _new('MeshBasicMaterial', [
+            {'color': color},
+          ])
+        : _new('MeshLambertMaterial', [
+            {'color': color, 'flatShading': flat},
+          ]),
   );
   return Object3D._(m);
 }
