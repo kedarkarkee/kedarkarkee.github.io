@@ -93,10 +93,10 @@ class Overlay {
         _projects();
       case 'experience':
         _title.textContent = 'Experience';
-        _timeline([for (final j in experience) (j.years, j.role, j.place, j.note)]);
+        _timeline([for (final j in experience) (years: j.years, title: j.role, place: j.place, url: j.url, note: j.note)]);
       case 'education':
         _title.textContent = 'Education';
-        _timeline([for (final e in education) (e.years, e.degree, e.school, e.note)]);
+        _timeline([for (final e in education) (years: e.years, title: e.degree, place: e.school, url: null, note: e.note)]);
       case 'skills':
         _title.textContent = 'Skills';
         _skills();
@@ -133,7 +133,7 @@ class Overlay {
       final card = _el('div', 'ov-card ov-tone-${p.tone}');
       final top = _el('div', 'ov-card-top');
       top.append(_el('span', 'ov-badge', p.category));
-      top.append(_el('span', 'ov-year', '${p.year}'));
+      if (p.year != null) top.append(_el('span', 'ov-year', '${p.year}'));
       card.append(top);
       card.append(_el('h3', 'ov-card-title', p.title));
       card.append(_el('p', 'ov-card-text', p.summary));
@@ -142,21 +142,28 @@ class Overlay {
         tags.append(_el('span', 'ov-chip', t.trim()));
       }
       card.append(tags);
-      card.append(_link('View project →', p.url, className: 'ov-card-link'));
+      final links = _el('div', 'ov-card-links');
+      for (final l in p.links) {
+        links.append(_link('${l.label} →', l.url, className: 'ov-card-link'));
+      }
+      card.append(links);
       grid.append(card);
     }
     _body.append(grid);
   }
 
-  void _timeline(List<(String, String, String, String)> items) {
+  void _timeline(List<({String years, String title, String place, String? url, String note})> items) {
     final list = _el('div', 'ov-timeline');
-    for (final (years, title, place, note) in items) {
-      final item = _el('div', 'ov-item');
-      item.append(_el('div', 'ov-item-years', years));
-      item.append(_el('h3', 'ov-item-title', title));
-      item.append(_el('div', 'ov-item-place', place));
-      item.append(_el('p', 'ov-text', note));
-      list.append(item);
+    for (final item in items) {
+      final row = _el('div', 'ov-item');
+      row.append(_el('div', 'ov-item-years', item.years));
+      row.append(_el('h3', 'ov-item-title', item.title));
+      // The place links to the company's site when we have one.
+      row.append(item.url == null
+          ? _el('div', 'ov-item-place', item.place)
+          : _link('${item.place} \u2197', item.url!, className: 'ov-item-place ov-item-link'));
+      if (item.note.isNotEmpty) row.append(_el('p', 'ov-text', item.note));
+      list.append(row);
     }
     _body.append(list);
   }

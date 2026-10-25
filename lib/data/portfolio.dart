@@ -1,5 +1,5 @@
-// All the text on the site lives here. Replace the placeholder content with
-// your own and the components pick it up automatically.
+// All the text shown inside the houses lives here. Edit it and the overlays
+// pick it up automatically.
 
 class Fact {
   const Fact(this.label, this.value);
@@ -11,7 +11,6 @@ class Profile {
   const Profile({
     required this.name,
     required this.email,
-    required this.headline,
     required this.intro,
     required this.facts,
     required this.about,
@@ -20,9 +19,6 @@ class Profile {
 
   final String name;
   final String email;
-
-  /// One entry per line of the big hero headline.
-  final List<String> headline;
   final String intro;
   final List<Fact> facts;
   final List<String> about;
@@ -40,12 +36,16 @@ class Job {
     required this.years,
     required this.role,
     required this.place,
-    required this.note,
+    this.url,
+    this.note = '',
   });
 
   final String years;
   final String role;
   final String place;
+
+  /// The company's website, if any.
+  final String? url;
   final String note;
 }
 
@@ -54,7 +54,7 @@ class Education {
     required this.years,
     required this.degree,
     required this.school,
-    required this.note,
+    this.note = '',
   });
 
   final String years;
@@ -66,6 +66,8 @@ class Education {
 class Skill {
   const Skill(this.area, this.items);
   final String area;
+
+  /// Comma-separated.
   final String items;
 }
 
@@ -74,159 +76,129 @@ class Project {
     required this.title,
     required this.summary,
     required this.category,
-    required this.year,
     required this.tags,
     required this.tone,
-    required this.url,
+    required this.links,
+    this.year,
   });
 
   final String title;
   final String summary;
   final String category;
-  final int year;
+  final int? year;
   final String tags;
 
-  /// 1-4, picks the swatch colour (see .tone-* in styles.css).
+  /// 1-4, picks the card's accent colour (see .ov-tone-* in styles.css).
   final int tone;
-  final String url;
+  final List<SocialLink> links;
 }
-
-// TODO: replace everything below with your own details.
 
 const profile = Profile(
   name: 'Kedar Karki',
-  email: 'hello@alexmorgan.dev',
-  headline: [
-    "Hi, I'm Kedar.",
-    'I build web apps',
-    'that load fast and',
-    'stay easy to change.',
-  ],
+  email: 'kedarkarky@gmail.com',
   intro:
-      'I\'m a full-stack developer who writes Dart on the server and in the '
-      'browser. I like small teams, clear code and products people use daily.',
+      "I'm Kedar, a software engineer who builds mobile apps with Flutter and Dart "
+      'and publishes open-source packages for the community.',
   facts: [
-    Fact('Working with', 'Dart, Jaspr, Flutter'),
-    Fact('Based', 'Remote, any timezone'),
-    Fact('Availability', 'Open to freelance work'),
+    Fact('Role', 'Software Engineer (Mobile)'),
+    Fact('Works with', 'Flutter, Dart, Firebase'),
+    Fact('Studying', 'MSc, Informatics and Intelligent Systems Engineering'),
   ],
   about: [
-    'I started out writing JavaScript, moved to Flutter for mobile apps, and '
-        'now spend most of my time building websites in Dart so the front end '
-        'and back end can share code.',
-    'I care about pages that load quickly on slow connections, interfaces '
-        'that can be used with a keyboard, and codebases a new teammate can '
-        'understand in a day.',
+    'I work mostly with Flutter and Dart. Since November 2023 I have been a '
+        'software engineer on the mobile team at Karobar Digital, and before that '
+        'I was a Flutter developer at InternSathi.',
+    'Outside of work I build and maintain open-source Dart and Flutter packages '
+        'on pub.dev, including tools for image editing, converting HTML to images, '
+        'and working with Nepali (Bikram Sambat) dates.',
+    "I finished my bachelor's in Computer Engineering at Tribhuvan University, "
+        'Institute of Engineering, in 2024, and I am now doing a master\'s in '
+        'Informatics and Intelligent Systems Engineering there.',
   ],
   contactNote:
-      'Tell me what you are building or which role you are hiring for. '
-      'I reply within two working days.',
+      "Working on something with Flutter, or want to talk about one of my packages? "
+      'Send me a message, or find me on any of these.',
 );
 
 const socialLinks = [
-  SocialLink('GitHub', 'https://github.com/your-username'),
-  SocialLink('LinkedIn', 'https://linkedin.com/in/your-username'),
-  SocialLink('Bluesky', 'https://bsky.app/profile/your-username'),
+  SocialLink('LinkedIn', 'https://www.linkedin.com/in/kedarkarkii/'),
+  SocialLink('GitHub', 'https://github.com/kedarkarkee'),
+  SocialLink('Facebook', 'https://www.facebook.com/kedarkarkii'),
 ];
 
 const experience = [
   Job(
-    years: '2024 to now',
-    role: 'Freelance developer',
-    place: 'Self-employed',
-    note: 'Websites and internal tools for small businesses, built with Jaspr.',
+    years: 'Nov 2023 to now',
+    role: 'Software Engineer (Mobile)',
+    place: 'Karobar Digital Pvt. Ltd.',
+    url: 'https://karobarapp.com',
   ),
   Job(
-    years: '2021 to 2024',
-    role: 'Software engineer',
-    place: 'Northwind Labs',
-    note: 'Built the customer dashboard and moved its front end to Dart.',
-  ),
-  Job(
-    years: '2019 to 2021',
-    role: 'Junior developer',
-    place: 'Brightside Agency',
-    note: 'Shipped marketing sites and small web apps for agency clients.',
+    years: 'Jan 2023 to Sep 2023',
+    role: 'Flutter Developer',
+    place: 'InternSathi (Sathi Edtech Pvt. Ltd.)',
+    url: 'https://internsathi.com',
   ),
 ];
 
-// TODO: replace with your own education.
 const education = [
   Education(
-    years: '2015 to 2019',
-    degree: 'B.E. in Computer Engineering',
-    school: 'Your University, Nepal',
-    note: 'Focused on software engineering, databases and web development.',
+    years: '2025 to now',
+    degree: "Master's in Informatics and Intelligent Systems Engineering",
+    school: 'Tribhuvan University, Institute of Engineering',
   ),
   Education(
-    years: '2013 to 2015',
-    degree: 'Higher Secondary (+2), Science',
-    school: 'Your College, Nepal',
-    note: 'Physics, maths and computer science.',
+    years: '2019 to 2024',
+    degree: "Bachelor's in Computer Engineering",
+    school: 'Tribhuvan University, Institute of Engineering',
   ),
 ];
 
 const skills = [
-  Skill('Front end', 'Dart, Jaspr, Flutter web, HTML, CSS, TypeScript'),
-  Skill('Back end', 'Dart server, Shelf, PostgreSQL, REST APIs'),
-  Skill('Tooling', 'Git, GitHub Actions, Docker, Firebase'),
+  Skill('Languages', 'Dart, JavaScript, Go, C, Python'),
+  Skill('Frameworks', 'Flutter, Express.js'),
+  Skill('Databases', 'SQLite, PostgreSQL, MongoDB, Cloud Firestore'),
+  Skill('Tools and technologies', 'Flutter and Dart, Firebase, Git and GitHub, AWS S3, GitHub Actions, Nifty, Project Management'),
 ];
-
-const categories = ['All', 'Web apps', 'Tools', 'Open source'];
 
 const projects = [
   Project(
-    title: 'Tidepool',
-    summary: 'A habit tracker that works offline and syncs when you reconnect.',
-    category: 'Web apps',
-    year: 2025,
-    tags: 'Jaspr, Dart, IndexedDB',
+    title: 'image_loom',
+    summary:
+        'Fast native image editing for Flutter. Compose crop, rotate, flip and '
+        'resize operations and render them in one pass.',
+    category: 'Flutter package',
+    tags: 'Flutter, Dart, Image editing',
     tone: 1,
-    url: 'https://example.com/tidepool',
+    links: [
+      SocialLink('GitHub', 'https://github.com/kedarkarkee/image_loom'),
+      SocialLink('pub.dev', 'https://pub.dev/packages/image_loom'),
+    ],
   ),
   Project(
-    title: 'Fieldnotes',
-    summary: 'Markdown notes with instant full-text search, all in the browser.',
-    category: 'Tools',
-    year: 2025,
-    tags: 'Dart, Web Workers',
+    title: 'html_to_image',
+    summary:
+        'A Flutter plugin for Android and iOS that converts an HTML web page '
+        'into raster images.',
+    category: 'Flutter plugin',
+    tags: 'Flutter, Android, iOS',
     tone: 2,
-    url: 'https://example.com/fieldnotes',
+    links: [
+      SocialLink('GitHub', 'https://github.com/kedarkarkee/html_to_image'),
+      SocialLink('pub.dev', 'https://pub.dev/packages/html_to_image'),
+    ],
   ),
   Project(
-    title: 'Parcel Map',
-    summary: 'A dispatch dashboard that shows where every delivery is right now.',
-    category: 'Web apps',
-    year: 2024,
-    tags: 'Jaspr, PostgreSQL, Maps',
+    title: 'bikram_sambat',
+    summary:
+        'A Dart package for working with Nepali dates, with extensive date '
+        'formatting and arithmetic in the Bikram Sambat calendar.',
+    category: 'Dart package',
+    tags: 'Dart, Nepali dates',
     tone: 3,
-    url: 'https://example.com/parcel-map',
-  ),
-  Project(
-    title: 'Kettle',
-    summary: 'A command-line tool that turns a folder of Markdown into a site.',
-    category: 'Open source',
-    year: 2024,
-    tags: 'Dart, CLI',
-    tone: 4,
-    url: 'https://example.com/kettle',
-  ),
-  Project(
-    title: 'Rulebook',
-    summary: 'A board game\'s rules as a searchable, printable web reference.',
-    category: 'Tools',
-    year: 2023,
-    tags: 'Jaspr, Static hosting',
-    tone: 1,
-    url: 'https://example.com/rulebook',
-  ),
-  Project(
-    title: 'jaspr_toast',
-    summary: 'A small package for showing toast notifications in Jaspr apps.',
-    category: 'Open source',
-    year: 2023,
-    tags: 'Dart, pub.dev',
-    tone: 2,
-    url: 'https://example.com/jaspr_toast',
+    links: [
+      SocialLink('GitHub', 'https://github.com/kedarkarkee/bikram_sambat'),
+      SocialLink('pub.dev', 'https://pub.dev/packages/bikram_sambat'),
+    ],
   ),
 ];

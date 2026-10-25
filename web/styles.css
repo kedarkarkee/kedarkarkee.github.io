@@ -682,3 +682,25 @@ html, body {
 .dark .overlay {
   background: rgba(0, 0, 0, 0.65);
 }
+
+/* Several links on a project card, and a company name that links out. */
+.ov-card-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 1.1rem;
+  margin-top: 0.8rem;
+}
+
+.ov-card-links .ov-card-link {
+  margin-top: 0;
+}
+
+.ov-item-link {
+  display: inline-block;
+  margin-bottom: 0.4rem;
+  text-decoration: none;
+}
+
+.ov-item-link:hover {
+  text-decoration: underline;
+}
