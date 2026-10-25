@@ -27,6 +27,8 @@ void main() {
   runApp(
     Document(
       title: 'Kedar Karki',
+      // Fill the screen on phones (including notches) and stop pinch-zoom from fighting the game.
+      viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover',
       head: [
         link(rel: 'stylesheet', href: 'styles.css'),
       ],

@@ -49,3 +49,114 @@ html, body {
 .prompt-hidden {
   opacity: 0;
 }
+
+/* --- Touch controls: only shown on touch screens --------------------------- */
+
+.joy,
+.touch-button,
+.hint-touch {
+  display: none;
+}
+
+.hint-desktop {
+  display: block;
+}
+
+.hidden {
+  display: none !important;
+}
+
+@media (pointer: coarse) {
+  html,
+  body,
+  .town {
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  .hint-desktop,
+  .prompt {
+    display: none;
+  }
+
+  /* The honk label still helps on touch, so keep it visible. */
+  .prompt.honk {
+    display: block;
+  }
+
+  .hint-touch {
+    display: block;
+    top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+    bottom: auto;
+    max-width: 90vw;
+    text-align: center;
+  }
+
+  .joy {
+    display: block;
+    position: fixed;
+    left: calc(env(safe-area-inset-left, 0px) + 1.25rem);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 1.5rem);
+    width: 9rem;
+    height: 9rem;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.28);
+    border: 2px solid rgba(255, 255, 255, 0.65);
+    touch-action: none;
+  }
+
+  .joy-knob {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .touch-button {
+    display: flex;
+    position: fixed;
+    right: calc(env(safe-area-inset-right, 0px) + 1.25rem);
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(25, 118, 210, 0.9);
+    border: 2px solid #fff;
+    color: #fff;
+    font: 700 1rem sans-serif;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+    touch-action: none;
+  }
+
+  .ride-button {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 2rem);
+    width: 5.5rem;
+    height: 5.5rem;
+  }
+
+  .honk-button {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 8.5rem);
+    width: 4.25rem;
+    height: 4.25rem;
+    background: rgba(245, 124, 0, 0.92);
+  }
+}
+
+/* Small screens: keep the on-screen text compact. */
+@media (max-width: 600px) {
+  .town-hint {
+    font-size: 0.8rem;
+  }
+
+  .speech,
+  .prompt {
+    font-size: 0.85rem;
+  }
+}
