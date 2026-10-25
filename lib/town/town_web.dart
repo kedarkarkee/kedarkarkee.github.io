@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:web/web.dart' as web;
 
+import 'bicycle.dart';
 import 'stickman.dart';
 import 'three.dart';
 
@@ -12,6 +13,11 @@ typedef Obstacle = ({double x, double z, double r});
 const _bound = 38.0;
 const _walkSpeed = 5.5;
 const _sprintSpeed = 11.0;
+const _rideSpeed = 10.0;
+const _rideSprintSpeed = 15.0;
+
+/// How close he must be to the parked bicycle to get on.
+const _mountDistance = 3.5;
 
 Future<void> startTown(String containerId) async {
   final container = await _waitFor(containerId);
@@ -39,6 +45,10 @@ class _Town {
   final obstacles = <Obstacle>[];
   late final Object3D ground;
   late final Stickman stickman;
+  final bike = Bicycle();
+  late final web.HTMLElement prompt;
+  final _anchor = vec3(0, 0, 0);
+  bool riding = false;
 
   double? targetX, targetZ;
   double heading = 0;
@@ -59,6 +69,14 @@ class _Town {
     scene.add(stickman.root);
     scene.add(stickman.face);
 
+    // Parked beside the road, lying along the x axis.
+    bike.root.position.set(5, 0, 9);
+    bike.root.rotation.y = math.pi / 2;
+    scene.add(bike.root);
+
+    prompt = web.document.createElement('div') as web.HTMLElement..className = 'prompt prompt-hidden';
+    container.append(prompt);
+
     renderer.setPixelRatio(math.min(web.window.devicePixelRatio, 2));
     container.append(renderer.domElement);
     _resize();
@@ -69,6 +87,7 @@ class _Town {
       ((web.KeyboardEvent e) {
         sprint = e.shiftKey;
         final k = e.key.toLowerCase();
+        if (k == 'e' && !e.repeat) _toggleBike();
         if (_moveKeys.contains(k)) {
           keys.add(k);
           targetX = targetZ = null;
@@ -104,6 +123,44 @@ class _Town {
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
+  }
+
+  double get _distanceToBike {
+    final dx = stickman.root.position.x - bike.root.position.x;
+    final dz = stickman.root.position.z - bike.root.position.z;
+    return math.sqrt(dx * dx + dz * dz);
+  }
+
+  /// E: get on the bicycle when standing next to it, or get off.
+  void _toggleBike() {
+    if (riding) {
+      riding = false;
+      // Step off to the side the bike is facing away from its left.
+      final h = bike.root.rotation.y;
+      stickman.root.position.x += math.cos(h) * 2.2;
+      stickman.root.position.z -= math.sin(h) * 2.2;
+      targetX = targetZ = null;
+    } else if (_distanceToBike < _mountDistance) {
+      riding = true;
+      stickman.root.position.set(bike.root.position.x, 0, bike.root.position.z);
+      heading = bike.root.rotation.y;
+      stickman.root.rotation.y = heading;
+      targetX = targetZ = null;
+    }
+  }
+
+  /// Shows the E prompt above the bike (to mount) or the rider (to dismount).
+  void _updatePrompt() {
+    final show = riding || _distanceToBike < _mountDistance;
+    prompt.classList.toggle('prompt-hidden', !show);
+    if (!show) return;
+    prompt.textContent = riding ? 'Press E to get off' : 'Press E to ride';
+    final p = riding ? stickman.root.position : bike.root.position;
+    _anchor.set(p.x, riding ? 4.9 : 3.4, p.z);
+    _anchor.project(camera);
+    final w = container.clientWidth, h = container.clientHeight;
+    prompt.style.left = '${(_anchor.x * 0.5 + 0.5) * w}px';
+    prompt.style.top = '${(-_anchor.y * 0.5 + 0.5) * h}px';
   }
 
   void _click(web.PointerEvent e) {
@@ -149,7 +206,9 @@ class _Town {
       final len = math.sqrt(dx * dx + dz * dz);
       dx /= len;
       dz /= len;
-      final speed = sprint ? _sprintSpeed : _walkSpeed;
+      final speed = riding
+          ? (sprint ? _rideSprintSpeed : _rideSpeed)
+          : (sprint ? _sprintSpeed : _walkSpeed);
       var nx = (pos.x + dx * speed * dt).clamp(-_bound, _bound);
       var nz = (pos.z + dz * speed * dt).clamp(-_bound, _bound);
       for (final o in obstacles) {
@@ -160,8 +219,10 @@ class _Town {
           nz = o.z + oz / d * o.r;
         }
       }
+      final moved = math.sqrt((nx - pos.x) * (nx - pos.x) + (nz - pos.z) * (nz - pos.z));
       pos.x = nx;
       pos.z = nz;
+      if (riding) bike.roll(moved);
 
       // Turn smoothly towards the direction of travel.
       var diff = math.atan2(dx, dz) - heading;
@@ -174,7 +235,11 @@ class _Town {
       heading += diff * math.min(1, dt * 12);
       stickman.root.rotation.y = heading;
     }
-    stickman.animate(t, moving, sprint: sprint);
+    if (riding) {
+      bike.root.position.set(pos.x, 0, pos.z);
+      bike.root.rotation.y = heading;
+    }
+    stickman.animate(t, moving, sprint: sprint, riding: riding, crank: bike.crank);
 
     // Chase camera.
     final k = math.min(1, dt * (sprint && moving ? 6 : 4));
@@ -183,6 +248,7 @@ class _Town {
     camera.position.z += (pos.z + 11 - camera.position.z) * k;
     camera.lookAt(pos.x, 1.8, pos.z);
     stickman.updateFace(camera);
+    _updatePrompt();
   }
 
   // --- Town -----------------------------------------------------------

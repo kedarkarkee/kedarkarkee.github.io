@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'bicycle.dart';
 import 'three.dart';
 
 /// A hand-drawn style stickman.
@@ -19,6 +20,8 @@ class Stickman {
   /// The billboarded head. Add to the scene (not to [root]).
   final face = Object3D.group();
 
+  /// Holds the whole body so it can be lifted onto a bicycle seat.
+  final _rig = Object3D.group();
   final _torso = Object3D.group();
   final _legP = Object3D.group(), _legN = Object3D.group();
   final _kneeP = Object3D.group(), _kneeN = Object3D.group();
@@ -52,8 +55,10 @@ class Stickman {
   }
 
   void _build() {
+    root.add(_rig);
+
     // Torso, pivoting at the hips.
-    _at(_torso, root, 0, _hipY, 0);
+    _at(_torso, _rig, 0, _hipY, 0);
     _at(_ink3('Cylinder', [0.08, 0.08, _headY - _headR + 0.05, 8]), _torso, 0, (_headY - _headR) / 2, 0);
 
     // Arms hang from one shoulder point like the reference drawing.
@@ -67,7 +72,7 @@ class Stickman {
 
     // Legs hang from the hips with long flat shoes.
     for (final (leg, knee, s) in [(_legP, _kneeP, 1.0), (_legN, _kneeN, -1.0)]) {
-      _at(leg, root, s * 0.03, _hipY, 0);
+      _at(leg, _rig, s * 0.03, _hipY, 0);
       _stick(leg, _thigh);
       _at(knee, leg, 0, -_thigh, 0);
       _stick(knee, _shin);
@@ -106,17 +111,73 @@ class Stickman {
     }
   }
 
-  /// Keeps the face over the body and turned to the camera.
+  /// Keeps the face over the head (following the lean and any lift onto a
+  /// bike) and turned to the camera.
   void updateFace(Camera camera) {
     final p = root.position;
-    face.position.set(p.x, p.y + _hipY + _headY + _bob, p.z);
+    final lean = _torso.rotation.x;
+    final fwd = _rig.position.z + _headY * math.sin(lean);
+    final h = root.rotation.y;
+    face.position.set(
+      p.x + fwd * math.sin(h),
+      p.y + _rig.position.y + _hipY + _headY * math.cos(lean) + _bob,
+      p.z + fwd * math.cos(h),
+    );
     face.quaternion.copy(camera.quaternion);
   }
 
+  /// Two-link IK in the (z, y) plane. Returns the forward angle of the first
+  /// link from straight down, and the bend of the second relative to it.
+  /// [kneeForward] puts the joint in front of the line (legs) or below it (arms).
+  (double, double) _ik(double a, double b, double dz, double dy, {required bool kneeForward}) {
+    final d = math.min(math.sqrt(dz * dz + dy * dy), a + b - 0.01);
+    final toTarget = math.atan2(dz, dy);
+    final alpha = math.acos(((a * a + d * d - b * b) / (2 * a * d)).clamp(-1.0, 1.0));
+    final interior = math.acos(((a * a + b * b - d * d) / (2 * a * b)).clamp(-1.0, 1.0));
+    return (kneeForward ? toTarget + alpha : toTarget - alpha, math.pi - interior);
+  }
+
+  /// Seated on the bicycle: feet follow the pedals ([crank]) and hands grip
+  /// the handlebar.
+  void _ride(double crank) {
+    const lean = 0.35;
+    const hipZ = -0.35, hipY = 1.9;
+    _rig.position.set(0, hipY - _hipY, hipZ);
+    _torso.rotation.x = lean;
+    _bob = 0;
+
+    for (final (leg, knee, s) in [(_legP, _kneeP, 1.0), (_legN, _kneeN, -1.0)]) {
+      // Pedal position on the crank circle; the ankle sits just above it.
+      final z = -s * Bicycle.crankLength * math.sin(crank);
+      final y = Bicycle.crankY - s * Bicycle.crankLength * math.cos(crank) + 0.12;
+      final (thigh, bend) = _ik(_thigh, _shin, z - hipZ, hipY - y, kneeForward: true);
+      leg.rotation.x = -thigh;
+      leg.rotation.z = s * 0.1;
+      knee.rotation.x = bend;
+    }
+
+    final shoulderZ = hipZ + _shoulderY * math.sin(lean);
+    final shoulderY = hipY + _shoulderY * math.cos(lean);
+    for (final (arm, elbow, s) in [(_armP, _elbowP, 1.0), (_armN, _elbowN, -1.0)]) {
+      final (upper, bend) = _ik(_upperArm, _foreArm, Bicycle.handleZ - shoulderZ, shoulderY - Bicycle.handleY, kneeForward: false);
+      // Arm angles are relative to the leaning torso.
+      arm.rotation.x = -upper - lean;
+      arm.rotation.z = s * 0.3;
+      elbow.rotation.x = -bend;
+    }
+  }
+
   /// [sprint] runs faster with a longer stride, more knee lift and a forward lean.
-  void animate(double t, bool moving, {bool sprint = false}) {
+  ///
+  /// [riding] seats him on a bicycle whose crank is at angle [crank].
+  void animate(double t, bool moving, {bool sprint = false, bool riding = false, double crank = 0}) {
     final dt = math.min(t - _lastT, 0.05);
     _lastT = t;
+    if (riding) {
+      _ride(crank);
+      return;
+    }
+    _rig.position.set(0, 0, 0);
     if (moving) {
       // Advance the gait phase instead of using the clock, so switching
       // between walking and sprinting doesn't make the legs jump.

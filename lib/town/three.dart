@@ -23,7 +23,10 @@ extension type Vec3._(JSObject _) implements JSObject {
   external Vec3 set(num x, num y, num z);
   external Vec3 copy(Vec3 v);
   external Vec3 lerp(Vec3 v, num t);
+  external Vec3 project(Camera camera);
 }
+
+Vec3 vec3(num x, num y, num z) => Vec3._(_new('Vector3', [x, y, z]));
 
 extension type Quat._(JSObject _) implements JSObject {
   external Quat copy(Quat q);
