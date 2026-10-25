@@ -27,23 +27,8 @@ void main() {
   runApp(
     Document(
       title: 'Kedar Karki',
-      styles: [
-        // Special import rule to include to another css file.
-        css.import('https://fonts.googleapis.com/css?family=Roboto'),
-        // Each style rule takes a valid css selector and a set of styles.
-        // Styles are defined using type-safe css bindings and can be freely chained and nested.
-        css('html, body').styles(
-          width: 100.percent,
-          minHeight: 100.vh,
-          padding: .zero,
-          margin: .zero,
-          fontFamily: const .list([FontFamily('Roboto'), FontFamilies.sansSerif]),
-        ),
-        css('h1').styles(
-          margin: .unset,
-          fontSize: 4.rem,
-        ),
-      ],
+      // Fill the screen on phones (including notches) and stop pinch-zoom from fighting the game.
+      viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover',
       head: [
         link(rel: 'stylesheet', href: 'styles.css'),
       ],

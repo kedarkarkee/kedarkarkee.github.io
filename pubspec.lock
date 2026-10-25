@@ -257,14 +257,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.23.4"
-  jaspr_router:
-    dependency: "direct main"
-    description:
-      name: jaspr_router
-      sha256: "5c9347395d75e501f02e79469eb588534ae306db6fa556c8f26421381ac6cba7"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.9.0"
   json_annotation:
     dependency: transitive
     description:
@@ -514,7 +506,7 @@ packages:
     source: hosted
     version: "1.2.1"
   web:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: web
       sha256: "868d88a33d8a87b18ffc05f9f030ba328ffefba92d6c127917a2ba740f9cfe4a"

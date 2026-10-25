@@ -5,8 +5,7 @@
 // Generated with jaspr_builder
 
 import 'package:jaspr/server.dart';
-import 'package:portfolio/components/work_section.dart' as _work_section;
-import 'package:portfolio/constants/theme.dart' as _theme;
+import 'package:portfolio/components/town_scene.dart' as _town_scene;
 
 /// Default [ServerOptions] for use with your Jaspr project.
 ///
@@ -27,9 +26,6 @@ import 'package:portfolio/constants/theme.dart' as _theme;
 ServerOptions get defaultServerOptions => ServerOptions(
   clientId: 'main.client.dart.js',
   clients: {
-    _work_section.WorkSection: ClientTarget<_work_section.WorkSection>(
-      'work_section',
-    ),
+    _town_scene.TownScene: ClientTarget<_town_scene.TownScene>('town_scene'),
   },
-  styles: () => [..._theme.styles],
 );
